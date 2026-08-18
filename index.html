@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoloKit Pro — Invoice Generator, Time Tracker & Tax Tools for Freelancers</title>
+<meta name="description" content="SoloKit Pro is a free browser-based toolkit for freelancers: generate professional PDF invoices, track billable time, calculate payment platform fees, analyze bank statements, and estimate freelance tax set-asides — all in one place, no signup required to try.">
+<meta name="keywords" content="freelancer invoice generator, free invoice maker, freelance time tracker, payment fee calculator, freelance tax calculator Pakistan, PSEB tax, IT export income tax, invoice PDF generator">
+<link rel="canonical" href="https://claritywithai.org/">
+
+<!-- Open Graph / social sharing -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="SoloKit Pro — Invoice Generator, Time Tracker & Tax Tools for Freelancers">
+<meta property="og:description" content="Generate professional invoices, track billable hours, calculate platform fees, and estimate tax set-asides — free tools built for freelancers and solo founders.">
+<meta property="og:url" content="https://claritywithai.org/">
+<meta property="og:site_name" content="SoloKit Pro">
+
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SoloKit Pro — Invoice Generator, Time Tracker & Tax Tools for Freelancers">
+<meta name="twitter:description" content="Free browser-based tools for freelancers: invoicing, time tracking, fee calculators, and tax planning — all in one dashboard.">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          paper:   { DEFAULT: '#F5F3EC', surface: '#FFFFFF' },
+          ink:     { DEFAULT: '#15171A', soft: '#5B5D57' },
+          line:    '#E2DFD3',
+          dark:    { bg: '#14201C', surface: '#1B2925', ink: '#F2F1EA', soft: '#9CA39C', line: '#2A3A34' },
+          brand:   { DEFAULT: '#E8791A', dark: '#C4630F', soft: '#FCEBD8' },
+          pos:     '#3E8E5B',
+          neg:     '#C24F3D',
+        },
+        fontFamily: {
+          display: ['"Space Grotesk"','sans-serif'],
+          sans: ['Inter','sans-serif'],
+          mono: ['"JetBrains Mono"','monospace'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html{scroll-behavior:smooth;}
+  body{font-family:'Inter',sans-serif;}
+  .tabular{font-variant-numeric:tabular-nums;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#c9c4b3;border-radius:4px;}
+  .dark ::-webkit-scrollbar-thumb{background:#2A3A34;}
+
+  /* Tool-tray slot: carved/inset look for sidebar nav items */
+  .tool-slot{
+    position:relative;
+    transition:all .15s ease;
+  }
+  .tool-slot::before{
+    content:"";
+    position:absolute; inset:0;
+    border-radius:10px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+    pointer-events:none;
+  }
+  .dark .tool-slot::before{
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.35);
+  }
+  .tool-slot.active{
+    background:var(--slot-active-bg,#fff);
+  }
+
+  .fade-in{animation:fadeIn .25s ease both;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  [x-cloak]{display:none!important;}
+</style>
+</head>
+<body class="bg-paper dark:bg-dark-bg text-ink dark:text-dark-ink font-sans transition-colors duration-200">
+
+<!-- ===================== SETUP REQUIRED SCREEN ===================== -->
+<div id="setupScreen" class="hidden min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-md text-center">
+    <div class="w-14 h-14 rounded-2xl bg-brand-soft dark:bg-brand/10 flex items-center justify-center mx-auto mb-5">
+      <i data-lucide="settings" class="w-7 h-7 text-brand"></i>
+    </div>
+    <h1 class="font-display font-700 text-xl mb-2">Almost there — connect Supabase</h1>
+    <p class="text-sm text-ink-soft dark:text-dark-soft mb-5 leading-relaxed">
+      SoloKit Pro needs a Supabase project for accounts and access control. Open <code class="font-mono text-xs bg-paper dark:bg-dark-bg px-1.5 py-0.5 rounded">index.html</code>,
+      find the <code class="font-mono text-xs bg-paper dark:bg-dark-bg px-1.5 py-0.5 rounded">SUPABASE_URL</code> and <code class="font-mono text-xs bg-paper dark:bg-dark-bg px-1.5 py-0.5 rounded">SUPABASE_ANON_KEY</code> lines near the bottom, and replace them with your project's values.
+    </p>
+    <p class="text-xs text-ink-soft dark:text-dark-soft">See README.md for the full step-by-step setup guide.</p>
+  </div>
+</div>
+
+<!-- ===================== AUTH SCREEN ===================== -->
+<div id="authScreen" class="min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm">
+
+    <div class="flex items-center gap-2.5 justify-center mb-8">
+      <div class="w-9 h-9 rounded-lg bg-brand flex items-center justify-center">
+        <i data-lucide="wrench" class="w-5 h-5 text-white"></i>
+      </div>
+      <span class="font-display font-700 text-xl tracking-tight">SoloKit <span class="text-brand">Pro</span></span>
+    </div>
+
+    <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-7 shadow-sm">
+      <div class="flex mb-6 border-b border-line dark:border-dark-line">
+        <button id="tabLogin" class="flex-1 pb-3 text-sm font-semibold border-b-2 border-brand text-ink dark:text-dark-ink">Log in</button>
+        <button id="tabSignup" class="flex-1 pb-3 text-sm font-semibold border-b-2 border-transparent text-ink-soft dark:text-dark-soft">Sign up</button>
+      </div>
+
+      <form id="authForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Email</label>
+          <input type="email" id="authEmail" required class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand" placeholder="you@example.com">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Password</label>
+          <input type="password" id="authPassword" required minlength="6" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand" placeholder="••••••••">
+        </div>
+        <p id="authError" class="text-sm text-neg hidden"></p>
+        <p id="authInfo" class="text-sm text-pos hidden"></p>
+        <button type="submit" id="authSubmitBtn" class="w-full py-2.5 rounded-lg bg-ink dark:bg-brand text-white text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+          <span id="authSubmitLabel">Log in</span>
+          <i data-lucide="loader-2" id="authSpinner" class="w-4 h-4 animate-spin hidden"></i>
+        </button>
+      </form>
+
+      <button type="button" id="demoModeBtn" class="w-full mt-3 py-2.5 rounded-lg border border-dashed border-line dark:border-dark-line text-sm font-semibold text-ink-soft dark:text-dark-soft hover:border-brand hover:text-brand transition flex items-center justify-center gap-2">
+        <i data-lucide="play-circle" class="w-4 h-4"></i> Try a live demo — no signup required
+      </button>
+    </div>
+
+    <p class="text-center text-xs text-ink-soft dark:text-dark-soft mt-5">New accounts get a free 24-hour trial of every tool. No card required.</p>
+    <p class="text-center text-xs font-medium text-pos mt-1">✓ 30-day money-back guarantee, no questions asked</p>
+
+    <div class="mt-7 grid grid-cols-3 gap-2 text-center">
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg py-3 px-2">
+        <p class="font-mono font-bold text-sm text-brand">$20</p>
+        <p class="text-[10px] text-ink-soft dark:text-dark-soft leading-tight mt-0.5">once — not<br>$19-49/month</p>
+      </div>
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg py-3 px-2">
+        <p class="font-mono font-bold text-sm text-brand">0%</p>
+        <p class="text-[10px] text-ink-soft dark:text-dark-soft leading-tight mt-0.5">cut on invoice<br>payments</p>
+      </div>
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-lg py-3 px-2">
+        <p class="font-mono font-bold text-sm text-brand">100%</p>
+        <p class="text-[10px] text-ink-soft dark:text-dark-soft leading-tight mt-0.5">private — data<br>never leaves browser</p>
+      </div>
+    </div>
+    <p class="text-center text-[11px] text-ink-soft dark:text-dark-soft mt-3">🌍 Built for freelancers everywhere — pay in your local currency, tax tools for US, UK, India &amp; Pakistan, invoices in 12 currencies</p>
+  </div>
+</div>
+
+<!-- ===================== TRIAL EXPIRED SCREEN ===================== -->
+<div id="expiredScreen" class="hidden min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-sm text-center">
+    <div class="w-14 h-14 rounded-2xl bg-neg/10 flex items-center justify-center mx-auto mb-5">
+      <i data-lucide="lock" class="w-7 h-7 text-neg"></i>
+    </div>
+    <h1 class="font-display font-700 text-xl mb-2">Your 24-hour trial has expired</h1>
+    <p class="text-sm text-ink-soft dark:text-dark-soft mb-6 leading-relaxed">Get lifetime access to every SoloKit Pro tool for a one-time payment of <strong class="text-ink dark:text-dark-ink">$20</strong>. No subscription.</p>
+    <a id="expiredCheckoutBtn" href="#" target="_blank" class="w-full inline-flex items-center justify-center gap-2 py-3 rounded-lg bg-brand text-white text-sm font-semibold hover:bg-brand-dark transition mb-2">
+      <i data-lucide="credit-card" class="w-4 h-4"></i> Get Lifetime Access — $20
+    </a>
+    <p class="text-xs font-medium text-pos mb-3">✓ 30-day money-back guarantee, no questions asked</p>
+    <button id="expiredRefreshBtn" class="w-full py-2.5 rounded-lg border border-line dark:border-dark-line text-sm font-semibold text-ink-soft dark:text-dark-soft hover:bg-paper dark:hover:bg-dark-bg transition">
+      I already paid — refresh access
+    </button>
+    <button id="expiredLogoutBtn" class="block mx-auto mt-5 text-xs text-ink-soft dark:text-dark-soft underline">Log out</button>
+  </div>
+</div>
+
+<!-- ===================== DASHBOARD ===================== -->
+<div id="dashboard" class="hidden">
+
+  <!-- Trial banner -->
+  <div id="trialBanner" class="hidden bg-brand-soft dark:bg-brand/10 border-b border-brand/20 px-5 py-2.5 flex items-center justify-center gap-2 text-sm">
+    <i data-lucide="clock" class="w-4 h-4 text-brand"></i>
+    <span class="text-ink dark:text-dark-ink font-medium">Trial: <span id="trialCountdown" class="font-mono font-semibold">--:--:--</span> remaining</span>
+    <a id="trialUpgradeLink" href="#" target="_blank" class="ml-2 text-brand font-semibold underline underline-offset-2">Upgrade now</a>
+  </div>
+
+  <!-- Demo banner -->
+  <div id="demoBanner" class="hidden bg-pos/10 border-b border-pos/20 px-5 py-2.5 flex items-center justify-center gap-2 text-sm flex-wrap">
+    <i data-lucide="sparkles" class="w-4 h-4 text-pos"></i>
+    <span class="text-ink dark:text-dark-ink font-medium">You're exploring a live demo with sample data — sign up free for cloud backup and your own 24-hour trial.</span>
+    <button id="demoSignupBtn" class="ml-2 text-pos font-semibold underline underline-offset-2">Sign up free →</button>
+  </div>
+
+  <div class="flex min-h-screen">
+
+    <!-- ===== TOOL-TRAY SIDEBAR ===== -->
+    <aside class="w-64 shrink-0 bg-white dark:bg-dark-surface border-r border-line dark:border-dark-line flex flex-col">
+      <div class="px-5 py-5 flex items-center gap-2.5 border-b border-line dark:border-dark-line">
+        <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center shrink-0">
+          <i data-lucide="wrench" class="w-4.5 h-4.5 text-white"></i>
+        </div>
+        <span class="font-display font-700 text-base tracking-tight">SoloKit <span class="text-brand">Pro</span></span>
+      </div>
+
+      <nav class="flex-1 px-3 py-4 space-y-1.5">
+        <p class="px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-soft dark:text-dark-soft mb-2">Your tools</p>
+
+        <button data-module="overview" class="nav-btn tool-slot w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-paper dark:bg-dark-bg text-ink-soft dark:text-dark-soft hover:text-ink dark:hover:text-dark-ink transition">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 shrink-0"></i> Overview
+        </button>
+        <button data-module="analyzer" class="nav-btn tool-slot w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-paper dark:bg-dark-bg text-ink-soft dark:text-dark-soft hover:text-ink dark:hover:text-dark-ink transition">
+          <i data-lucide="receipt" class="w-4 h-4 shrink-0"></i> Statement Analyzer
+        </button>
+        <button data-module="invoice" class="nav-btn tool-slot w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-paper dark:bg-dark-bg text-ink-soft dark:text-dark-soft hover:text-ink dark:hover:text-dark-ink transition">
+          <i data-lucide="file-text" class="w-4 h-4 shrink-0"></i> Invoice Generator
+        </button>
+        <button data-module="fees" class="nav-btn tool-slot w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-paper dark:bg-dark-bg text-ink-soft dark:text-dark-soft hover:text-ink dark:hover:text-dark-ink transition">
+          <i data-lucide="percent" class="w-4 h-4 shrink-0"></i> Fee Calculator
+        </button>
+        <button data-module="timer" class="nav-btn tool-slot w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-paper dark:bg-dark-bg text-ink-soft dark:text-dark-soft hover:text-ink dark:hover:text-dark-ink transition">
+          <i data-lucide="timer" class="w-4 h-4 shrink-0"></i> Time Tracker
+        </button>
+        <button data-module="taxsaver" class="nav-btn tool-slot w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-paper dark:bg-dark-bg text-ink-soft dark:text-dark-soft hover:text-ink dark:hover:text-dark-ink transition">
+          <i data-lucide="piggy-bank" class="w-4 h-4 shrink-0"></i> Tax Set-Aside
+        </button>
+      </nav>
+
+      <div class="px-3 py-4 border-t border-line dark:border-dark-line space-y-1.5">
+        <button id="themeToggle" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-ink-soft dark:text-dark-soft hover:bg-paper dark:hover:bg-dark-bg transition">
+          <i data-lucide="sun-moon" class="w-4 h-4 shrink-0"></i> <span id="themeToggleLabel">Dark mode</span>
+        </button>
+        <div class="px-3 py-2 text-xs text-ink-soft dark:text-dark-soft truncate" id="userEmailLabel"></div>
+        <div class="px-3 pb-1 flex items-center gap-1.5">
+          <i data-lucide="cloud" class="w-3 h-3 text-ink-soft dark:text-dark-soft"></i>
+          <span id="syncStatus" class="text-[11px] font-medium"></span>
+        </div>
+        <button id="logoutBtn" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-ink-soft dark:text-dark-soft hover:bg-paper dark:hover:bg-dark-bg transition">
+          <i data-lucide="log-out" class="w-4 h-4 shrink-0"></i> Log out
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="flex-1 overflow-y-auto">
+      <div id="moduleContainer" class="max-w-5xl mx-auto px-8 py-10 fade-in"></div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+/* ===================== CONFIG — replace with your own project values ===================== */
+const SUPABASE_URL = 'https://devdnnsvxjiubskwkfkf.supabase.co';        // e.g. https://xxxxx.supabase.co
+const SUPABASE_ANON_KEY = 'sb_publishable_hhEurNVT_zdwW7F7caUFeA_XV9_f4uf';
+const LEMONSQUEEZY_CHECKOUT_URL = 'YOUR_LEMONSQUEEZY_CHECKOUT_URL'; // e.g. https://yourstore.lemonsqueezy.com/buy/xxxx
+
+// IMPORTANT: creating the Supabase client throws immediately if the URL isn't
+// a real URL — which it isn't until you replace the placeholders above. If we
+// let that throw reach the top level, the ENTIRE script stops executing and
+// every button on the page silently stops responding (this was the original
+// "signup button does nothing" bug). We catch it here and show a clear
+// "Setup Required" screen instead, so the app fails loudly and helpfully
+// rather than failing silently.
+let sb = null;
+let SUPABASE_CONFIGURED = false;
+
+// pdf.js needs a worker script URL — set once, globally.
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+try{
+  if(SUPABASE_URL.startsWith('http') && SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY'){
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    SUPABASE_CONFIGURED = true;
+  }
+}catch(e){
+  console.error('Supabase not configured yet:', e.message);
+}
+
+let currentUser = null;
+let trialInterval = null;
+let demoMode = false;
+
+/* ===================== THEME ===================== */
+function applyTheme(dark){
+  document.documentElement.classList.toggle('dark', dark);
+  localStorage.setItem('solokit_theme', dark ? 'dark' : 'light');
+  document.getElementById('themeToggleLabel').textContent = dark ? 'Light mode' : 'Dark mode';
+}
+applyTheme(localStorage.getItem('solokit_theme') === 'dark');
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  applyTheme(!document.documentElement.classList.contains('dark'));
+});
+
+/* ===================== AUTH UI SWITCHING ===================== */
+let authMode = 'login';
+document.getElementById('tabLogin').addEventListener('click', ()=> setAuthMode('login'));
+document.getElementById('tabSignup').addEventListener('click', ()=> setAuthMode('signup'));
+
+function setAuthMode(mode){
+  authMode = mode;
+  const isLogin = mode==='login';
+  document.getElementById('tabLogin').classList.toggle('border-brand', isLogin);
+  document.getElementById('tabLogin').classList.toggle('border-transparent', !isLogin);
+  document.getElementById('tabLogin').classList.toggle('text-ink-soft', !isLogin);
+  document.getElementById('tabSignup').classList.toggle('border-brand', !isLogin);
+  document.getElementById('tabSignup').classList.toggle('border-transparent', isLogin);
+  document.getElementById('tabSignup').classList.toggle('text-ink-soft', isLogin);
+  document.getElementById('authSubmitLabel').textContent = isLogin ? 'Log in' : 'Create account';
+  hideAuthMessages();
+}
+
+function hideAuthMessages(){
+  document.getElementById('authError').classList.add('hidden');
+  document.getElementById('authInfo').classList.add('hidden');
+}
+function showAuthError(msg){
+  hideAuthMessages();
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+function showAuthInfo(msg){
+  hideAuthMessages();
+  const el = document.getElementById('authInfo');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+
+document.getElementById('authForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  hideAuthMessages();
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const spinner = document.getElementById('authSpinner');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  spinner.classList.remove('hidden'); submitBtn.disabled = true;
+
+  try{
+    if(authMode==='signup'){
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if(error) throw error;
+      if(data.user && !data.session){
+        showAuthInfo('Check your email to confirm your account, then log in.');
+      } else {
+        await initSession();
+      }
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+      await initSession();
+    }
+  } catch(err){
+    showAuthError(err.message || 'Something went wrong. Please try again.');
+  } finally {
+    spinner.classList.add('hidden'); submitBtn.disabled = false;
+  }
+});
+
+/* ===================== SESSION / ACCESS GATING ===================== */
+
+async function initSession(){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ showScreen('auth'); return; }
+  currentUser = session.user;
+
+  // Fetch (or wait for trigger-created) access record
+  let { data: access, error } = await sb
+    .from('users_access')
+    .select('is_lifetime, created_at')
+    .eq('id', currentUser.id)
+    .single();
+
+  // Fallback: if the row doesn't exist yet (trigger race on brand-new signup), retry once shortly after.
+  if(error || !access){
+    await new Promise(r=>setTimeout(r,1200));
+    const retry = await sb.from('users_access').select('is_lifetime, created_at').eq('id', currentUser.id).single();
+    access = retry.data;
+  }
+
+  if(!access){
+    showAuthError('Could not load your account. Please try logging in again.');
+    showScreen('auth');
+    return;
+  }
+
+  document.getElementById('userEmailLabel').textContent = currentUser.email;
+  document.getElementById('expiredCheckoutBtn').href = LEMONSQUEEZY_CHECKOUT_URL + (LEMONSQUEEZY_CHECKOUT_URL.includes('?') ? '&' : '?') + 'checkout[email]=' + encodeURIComponent(currentUser.email);
+  document.getElementById('trialUpgradeLink').href = document.getElementById('expiredCheckoutBtn').href;
+
+  if(access.is_lifetime){
+    showScreen('dashboard');
+    hideTrialBanner();
+    await pullCloudData();
+    loadModule('overview');
+    return;
+  }
+
+  const createdAt = new Date(access.created_at);
+  const hoursElapsed = (Date.now() - createdAt.getTime()) / 3600000;
+
+  if(hoursElapsed >= 24){
+    showScreen('expired');
+    return;
+  }
+
+  showScreen('dashboard');
+  startTrialCountdown(createdAt);
+  await pullCloudData();
+  loadModule('overview');
+}
+
+function showScreen(name){
+  document.getElementById('setupScreen').classList.toggle('hidden', name!=='setup');
+  document.getElementById('authScreen').classList.toggle('hidden', name!=='auth');
+  document.getElementById('expiredScreen').classList.toggle('hidden', name!=='expired');
+  document.getElementById('dashboard').classList.toggle('hidden', name!=='dashboard');
+  if(name!=='dashboard'){
+    document.getElementById('trialBanner').classList.add('hidden');
+    document.getElementById('demoBanner').classList.add('hidden');
+  }
+  if(name==='dashboard') lucide.createIcons();
+}
+
+function startTrialCountdown(createdAt){
+  const banner = document.getElementById('trialBanner');
+  banner.classList.remove('hidden');
+  if(trialInterval) clearInterval(trialInterval);
+
+  function tick(){
+    const msLeft = (createdAt.getTime() + 24*3600000) - Date.now();
+    if(msLeft <= 0){
+      clearInterval(trialInterval);
+      showScreen('expired');
+      return;
+    }
+    const h = Math.floor(msLeft/3600000);
+    const m = Math.floor((msLeft%3600000)/60000);
+    const s = Math.floor((msLeft%60000)/1000);
+    document.getElementById('trialCountdown').textContent =
+      String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
+  tick();
+  trialInterval = setInterval(tick, 1000);
+}
+function hideTrialBanner(){
+  document.getElementById('trialBanner').classList.add('hidden');
+  if(trialInterval) clearInterval(trialInterval);
+}
+
+/* ===================== DEMO MODE ===================== */
+// The whole app already runs on localStorage for its data — Supabase is only
+// needed for auth, trial gating, and cloud backup — so a no-login demo just
+// means skipping straight to the dashboard with a couple of sample records
+// pre-filled, so it isn't a blank slate.
+
+function seedDemoDataIfEmpty(){
+  if(loadJSON('solokit_invoices', []).length===0){
+    saveJSON('solokit_invoices', [{
+      id:'demo-inv-1', number:'INV-1001', clientName:'Acme Corp', clientEmail:'billing@acme.com', clientAddress:'',
+      issueDate: new Date().toISOString().slice(0,10),
+      dueDate: new Date(Date.now()+14*86400000).toISOString().slice(0,10),
+      items:[{ desc:'Website redesign', qty:20, rate:65 }],
+      taxPct:0, discountPct:0, notes:'Sample invoice — try editing it, or create your own.',
+      total: 1300, status:'unpaid'
+    }]);
+  }
+  if(loadJSON('solokit_time_entries', []).length===0){
+    saveJSON('solokit_time_entries', [{
+      id:'demo-t1', project:'Sample client project', startedAt: Date.now()-3*3600000, durationMs: 3*3600000, rate:60
+    }]);
+  }
+}
+
+function enterDemoMode(){
+  demoMode = true;
+  seedDemoDataIfEmpty();
+  document.getElementById('userEmailLabel').textContent = 'Demo mode';
+  document.getElementById('syncStatus').textContent = '';
+  showScreen('dashboard');
+  document.getElementById('demoBanner').classList.remove('hidden');
+  loadModule('overview');
+}
+
+document.getElementById('demoModeBtn').addEventListener('click', enterDemoMode);
+document.getElementById('demoSignupBtn').addEventListener('click', ()=>{
+  demoMode = false;
+  document.getElementById('demoBanner').classList.add('hidden');
+  showScreen('auth');
+  setAuthMode('signup');
+});
+
+document.getElementById('expiredRefreshBtn').addEventListener('click', initSession);
+document.getElementById('expiredLogoutBtn').addEventListener('click', doLogout);
+document.getElementById('logoutBtn').addEventListener('click', doLogout);
+
+async function doLogout(){
+  if(demoMode){
+    demoMode = false;
+    document.getElementById('demoBanner').classList.add('hidden');
+    showScreen('auth');
+    return;
+  }
+  if(sb) await sb.auth.signOut();
+  currentUser = null;
+  if(trialInterval) clearInterval(trialInterval);
+  document.getElementById('authForm').reset();
+  showScreen('auth');
+}
+
+/* ===================== MODULE NAVIGATION ===================== */
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> loadModule(btn.dataset.module));
+});
+
+function setActiveNav(name){
+  document.querySelectorAll('.nav-btn').forEach(btn=>{
+    const active = btn.dataset.module===name;
+    btn.classList.toggle('bg-white', active);
+    btn.classList.toggle('dark:bg-dark-surface', active);
+    btn.classList.toggle('text-ink', active);
+    btn.classList.toggle('dark:text-dark-ink', active);
+    btn.classList.toggle('shadow-sm', active);
+    btn.classList.toggle('bg-paper', !active);
+    btn.classList.toggle('dark:bg-dark-bg', !active);
+  });
+}
+
+function loadModule(name){
+  setActiveNav(name);
+  const container = document.getElementById('moduleContainer');
+  container.classList.remove('fade-in'); void container.offsetWidth; container.classList.add('fade-in');
+  if(typeof MODULES[name] === 'function'){
+    MODULES[name](container);
+  } else {
+    container.innerHTML = '<p class="text-ink-soft dark:text-dark-soft">Module not found.</p>';
+  }
+  lucide.createIcons();
+}
+
+/* ===================== CLOUD SYNC ===================== */
+// A generic per-user key/value store in Supabase mirrors specific
+// localStorage keys, so a paying customer's invoices/clients/time entries
+// survive clearing browser data or switching devices. Everything still
+// works offline-first via localStorage; the cloud copy updates in the
+// background and is pulled down fresh on every login.
+
+const CLOUD_SYNC_KEYS = new Set([
+  'solokit_invoices','solokit_clients','solokit_business_info',
+  'solokit_invoice_counter','solokit_time_entries','solokit_last_analysis'
+]);
+const syncTimers = {};
+
+function loadJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(raw===null || raw===undefined) return fallback;
+    const v = JSON.parse(raw);
+    return (v===null || v===undefined) ? fallback : v;
+  }catch{ return fallback; }
+}
+
+function saveJSON(key, val){
+  localStorage.setItem(key, JSON.stringify(val));
+  if(CLOUD_SYNC_KEYS.has(key)) queueCloudPush(key, val);
+}
+
+function setSyncStatus(status){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  const map = {
+    syncing: ['Syncing…','text-brand'],
+    synced:  ['Synced to cloud','text-pos'],
+    error:   ['Sync failed — saved locally','text-neg'],
+    off:     ['', ''],
+  };
+  const [label, cls] = map[status] || ['',''];
+  el.textContent = label;
+  el.className = 'text-[11px] font-medium '+cls;
+}
+
+function queueCloudPush(key, val){
+  if(!SUPABASE_CONFIGURED || !currentUser) return;
+  clearTimeout(syncTimers[key]);
+  setSyncStatus('syncing');
+  syncTimers[key] = setTimeout(async ()=>{
+    try{
+      const { error } = await sb.from('user_data').upsert({
+        id: currentUser.id, key, value: val, updated_at: new Date().toISOString()
+      });
+      if(error) throw error;
+      setSyncStatus('synced');
+    }catch(e){
+      console.error('Cloud sync failed for', key, e.message);
+      setSyncStatus('error');
+    }
+  }, 800);
+}
+
+async function pullCloudData(){
+  if(!SUPABASE_CONFIGURED || !currentUser) return;
+  setSyncStatus('syncing');
+  try{
+    const { data, error } = await sb.from('user_data').select('key,value').eq('id', currentUser.id);
+    if(error) throw error;
+    (data||[]).forEach(row=>{
+      localStorage.setItem(row.key, JSON.stringify(row.value));
+    });
+    setSyncStatus('synced');
+  }catch(e){
+    console.error('Cloud pull failed:', e.message);
+    setSyncStatus('error');
+  }
+}
+
+const MODULES = {}; // populated below by each module's script section
+
+/* ===================== MODULE: FEE CALCULATOR ===================== */
+
+const PLATFORMS = {
+  upwork:   { label: 'Upwork', pct: 10,  flat: 0,    note: 'Flat 10% service fee on all contracts (2023 pricing).' },
+  fiverr:   { label: 'Fiverr', pct: 20,  flat: 0,    note: 'Flat 20% seller service fee.' },
+  stripe:   { label: 'Stripe (US card)', pct: 2.9, flat: 0.30, note: '2.9% + $0.30 per successful charge.' },
+  paypal:   { label: 'PayPal (goods & services)', pct: 2.9, flat: 0.30, note: '2.9% + $0.30 for standard domestic transactions.' },
+  payoneer: { label: 'Payoneer', pct: 2,  flat: 0,    note: 'Typical marketplace receiving fee — varies by source, check your account.' },
+  wise:     { label: 'Wise (international transfer)', pct: 0.65, flat: 0, note: 'Typical effective rate 0.4-1.5% depending on currency pair and funding method — local account details often make receiving itself free.' },
+  wire:     { label: 'Bank wire transfer', pct: 0, flat: 25, note: 'Typical flat incoming wire fee — varies by bank, often $15-50.' },
+  custom:   { label: 'Custom platform', pct: 0, flat: 0, note: 'Enter your own percentage and flat fee below.' },
+};
+
+/* ===================== MODULE: BANK STATEMENT & SUBSCRIPTION ANALYZER ===================== */
+
+const KNOWN_MERCHANTS = {
+  netflix:'Streaming', hulu:'Streaming', disney:'Streaming', 'disney+':'Streaming', spotify:'Streaming',
+  youtube:'Streaming', hbo:'Streaming', max:'Streaming', paramount:'Streaming', peacock:'Streaming',
+  'apple tv':'Streaming', audible:'Streaming', 'amazon prime':'Streaming', primevideo:'Streaming',
+  adobe:'Software', canva:'Software', notion:'Software', slack:'Software', zoom:'Software',
+  dropbox:'Software', figma:'Software', github:'Software', openai:'Software', chatgpt:'Software',
+  claude:'Software', anthropic:'Software', microsoft:'Software', 'office 365':'Software', google:'Software',
+  grammarly:'Software', asana:'Software', trello:'Software', mailchimp:'Software', hubspot:'Software',
+  aws:'Hosting', 'amazon web':'Hosting', digitalocean:'Hosting', godaddy:'Hosting', namecheap:'Hosting',
+  vercel:'Hosting', netlify:'Hosting', cloudflare:'Hosting', linode:'Hosting', hostinger:'Hosting', bluehost:'Hosting',
+  gym:'Fitness', fitness:'Fitness', peloton:'Fitness', planet:'Fitness',
+  nytimes:'News/Media', 'new york times':'News/Media', wsj:'News/Media', economist:'News/Media',
+};
+
+function guessCategory(name){
+  const n = name.toLowerCase();
+  for(const key in KNOWN_MERCHANTS){
+    if(n.includes(key)) return KNOWN_MERCHANTS[key];
+  }
+  return 'Subscription';
+}
+
+// Normalize a raw transaction description into a stable merchant key for grouping.
+function normalizeDescription(desc){
+  let s = (desc||'').toLowerCase();
+  s = s.replace(/\d{4,}/g, ' ');                 // strip long reference/card numbers
+  s = s.replace(/\d{1,2}\/\d{1,2}(\/\d{2,4})?/g, ' '); // strip embedded dates
+  s = s.replace(/[^a-z0-9\s]/g, ' ');             // strip punctuation
+  s = s.replace(/\b(pos|debit|card|purchase|payment|recurring|autopay|ach|txn|the|inc|llc|ltd|co)\b/g, ' ');
+  s = s.replace(/\s+/g, ' ').trim();
+  // Use the first 3 significant words as the grouping key — stable across small suffix variations
+  const words = s.split(' ').filter(w=>w.length>1);
+  return words.slice(0,3).join(' ') || s;
+}
+
+function titleCase(str){
+  return (str||'').split(' ').filter(Boolean).map(w=>w[0].toUpperCase()+w.slice(1)).join(' ') || 'Unknown';
+}
+
+function parseDateLoose(str){
+  if(!str) return null;
+  const s = String(str).trim();
+  let d = new Date(s);
+  if(!isNaN(d.getTime())) return d;
+  // fallback: DD/MM/YYYY or MM/DD/YYYY with 2-digit year
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    let [,a,b,y] = m;
+    if(y.length===2) y = '20'+y;
+    d = new Date(`${y}-${a.padStart(2,'0')}-${b.padStart(2,'0')}`);
+    if(!isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+// Parse loose pasted text (one transaction per line) as a fallback when it isn't valid CSV.
+function parseLooseText(text){
+  const lines = text.split('\n').map(l=>l.trim()).filter(Boolean);
+  const rows = [];
+  const lineRe = /^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}-\d{2}-\d{2})\s+(.+?)\s+(-?\$?-?[\d,]+\.\d{2})$/;
+  lines.forEach(line=>{
+    const m = line.match(lineRe);
+    if(m){
+      rows.push({ date: m[1], description: m[2], amount: m[3] });
+    }
+  });
+  return rows;
+}
+
+// Given raw parsed rows (array of objects with varying column names), normalize to {date, description, amount}
+function normalizeRows(rawRows){
+  if(rawRows.length===0) return [];
+  const sampleKeys = Object.keys(rawRows[0]).map(k=>k.toLowerCase().trim());
+
+  const dateKey = Object.keys(rawRows[0]).find(k=>/date/i.test(k));
+  const descKey = Object.keys(rawRows[0]).find(k=>/(description|memo|merchant|payee|details|narrative)/i.test(k));
+  const amountKey = Object.keys(rawRows[0]).find(k=>/^(amount|amt)$/i.test(k.trim()));
+  const debitKey = Object.keys(rawRows[0]).find(k=>/debit/i.test(k));
+  const creditKey = Object.keys(rawRows[0]).find(k=>/credit/i.test(k));
+
+  const out = [];
+  rawRows.forEach(row=>{
+    const date = parseDateLoose(dateKey ? row[dateKey] : row[Object.keys(row)[0]]);
+    const description = (descKey ? row[descKey] : row[Object.keys(row)[1]]) || '';
+    let amount = null;
+
+    if(amountKey && row[amountKey] !== undefined && row[amountKey] !== ''){
+      amount = parseFloat(String(row[amountKey]).replace(/[\$,]/g,''));
+    } else if(debitKey && row[debitKey]){
+      const v = parseFloat(String(row[debitKey]).replace(/[\$,]/g,''));
+      if(!isNaN(v) && v!==0) amount = -Math.abs(v);
+    } else if(creditKey && row[creditKey]){
+      const v = parseFloat(String(row[creditKey]).replace(/[\$,]/g,''));
+      if(!isNaN(v) && v!==0) amount = Math.abs(v);
+    } else {
+      // fallback: try the 3rd column positionally
+      const vals = Object.values(row);
+      if(vals[2] !== undefined) amount = parseFloat(String(vals[2]).replace(/[\$,]/g,''));
+    }
+
+    if(date && description && amount!==null && !isNaN(amount)){
+      out.push({ date, description: String(description).trim(), amount });
+    }
+  });
+  return out;
+}
+
+// Core detection: group spend transactions by normalized merchant, then look for
+// a consistent time interval (weekly/monthly/quarterly/annual) between charges.
+function detectRecurring(transactions){
+  // Only consider outgoing money (negative amounts) as candidate subscriptions.
+  const spend = transactions.filter(t=>t.amount<0);
+  const groups = {};
+  spend.forEach(t=>{
+    const key = normalizeDescription(t.description);
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  const FREQ_BANDS = [
+    { label:'Weekly', min:5, max:9, monthlyMultiplier: 4.33 },
+    { label:'Monthly', min:25, max:35, monthlyMultiplier: 1 },
+    { label:'Quarterly', min:80, max:100, monthlyMultiplier: 1/3 },
+    { label:'Annual', min:350, max:380, monthlyMultiplier: 1/12 },
+  ];
+
+  const results = [];
+  Object.entries(groups).forEach(([key, txns])=>{
+    if(txns.length<2) return; // need at least 2 occurrences to detect a pattern
+    txns.sort((a,b)=>a.date-b.date);
+
+    const gaps = [];
+    for(let i=1;i<txns.length;i++){
+      gaps.push((txns[i].date - txns[i-1].date)/86400000);
+    }
+    const avgGap = gaps.reduce((s,g)=>s+g,0)/gaps.length;
+    const band = FREQ_BANDS.find(b=>avgGap>=b.min && avgGap<=b.max);
+    if(!band) return; // gaps too irregular to call this recurring
+
+    const amounts = txns.map(t=>Math.abs(t.amount));
+    const avgAmount = amounts.reduce((s,a)=>s+a,0)/amounts.length;
+    const maxDeviation = Math.max(...amounts.map(a=>Math.abs(a-avgAmount)));
+    if(maxDeviation > avgAmount*0.15 + 1) return; // amounts too inconsistent to call this recurring
+
+    const priceChanged = (Math.max(...amounts) - Math.min(...amounts)) > 0.01;
+
+    results.push({
+      name: titleCase(key),
+      category: guessCategory(key),
+      frequency: band.label,
+      lastAmount: amounts[amounts.length-1],
+      avgAmount,
+      monthlyCost: avgAmount * band.monthlyMultiplier,
+      occurrences: txns.length,
+      lastDate: txns[txns.length-1].date,
+      priceChanged,
+    });
+  });
+
+  return results.sort((a,b)=>b.monthlyCost-a.monthlyCost);
+}
+
+MODULES.analyzer = function(container){
+  const fmt = n => '$'+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  container.innerHTML = `
+    <div class="mb-8">
+      <h1 class="font-display font-700 text-2xl mb-1.5">Statement &amp; Subscription Analyzer</h1>
+      <p class="text-sm text-ink-soft dark:text-dark-soft">Upload a bank statement CSV, or paste transactions as text. Everything is parsed in your browser — nothing is uploaded anywhere.</p>
+    </div>
+
+    <div id="analyzerInput">
+      <div id="dropZone" class="border-2 border-dashed border-line dark:border-dark-line rounded-2xl p-10 text-center bg-white dark:bg-dark-surface hover:border-brand/50 transition cursor-pointer mb-4">
+        <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto mb-3 text-ink-soft dark:text-dark-soft"></i>
+        <p class="text-sm font-medium mb-1">Drop a CSV or PDF statement here, or click to browse</p>
+        <p class="text-xs text-ink-soft dark:text-dark-soft">Works with most bank/card export formats — PDF text is extracted right here in your browser</p>
+        <input type="file" id="csvFileInput" accept=".csv,text/csv,.pdf,application/pdf" class="hidden">
+      </div>
+
+      <p class="text-center text-xs text-ink-soft dark:text-dark-soft mb-4">— or paste transactions below —</p>
+
+      <textarea id="pasteArea" rows="6" placeholder="01/15/2026  NETFLIX.COM         -15.49&#10;01/18/2026  SPOTIFY USA          -9.99&#10;01/22/2026  AMAZON MKTPLACE     -42.10" class="w-full px-4 py-3 rounded-xl border border-line dark:border-dark-line bg-white dark:bg-dark-surface text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand/40 mb-1"></textarea>
+      <p id="pdfExtractNote" class="text-xs text-brand mb-4 hidden">PDF text extracted above — double-check it looks right before analyzing (PDF layouts vary, so review is worth it).</p>
+      <p id="pdfExtractNoteSpacer" class="mb-4"></p>
+
+      <button id="analyzeBtn" class="w-full py-3 rounded-lg bg-ink dark:bg-brand text-white text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+        <i data-lucide="scan-search" class="w-4 h-4"></i> Analyze transactions
+      </button>
+      <p id="analyzerError" class="text-sm text-neg mt-3 hidden"></p>
+      <p id="analyzerLoading" class="text-sm text-ink-soft dark:text-dark-soft mt-3 hidden flex items-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Reading PDF…</p>
+    </div>
+
+    <div id="analyzerResults" class="hidden">
+
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+          <p class="text-xs text-ink-soft dark:text-dark-soft mb-1">Recurring monthly spend</p>
+          <p class="font-mono text-2xl font-bold text-neg" id="statTotalMonthly">$0.00</p>
+        </div>
+        <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+          <p class="text-xs text-ink-soft dark:text-dark-soft mb-1">Subscriptions found</p>
+          <p class="font-mono text-2xl font-bold" id="statSubCount">0</p>
+        </div>
+        <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+          <p class="text-xs text-ink-soft dark:text-dark-soft mb-1">Transactions scanned</p>
+          <p class="font-mono text-2xl font-bold" id="statTxnCount">0</p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl overflow-hidden mb-4">
+        <div class="px-6 py-4 border-b border-line dark:border-dark-line">
+          <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft">Detected subscriptions</p>
+        </div>
+        <div id="subsList" class="divide-y divide-line dark:divide-dark-line"></div>
+      </div>
+
+      <button id="analyzeAgainBtn" class="text-xs font-semibold text-brand">← Analyze a different statement</button>
+    </div>
+  `;
+
+  const dropZone = container.querySelector('#dropZone');
+  const fileInput = container.querySelector('#csvFileInput');
+  const pasteArea = container.querySelector('#pasteArea');
+  const errorEl = container.querySelector('#analyzerError');
+  const loadingEl = container.querySelector('#analyzerLoading');
+  const pdfNoteEl = container.querySelector('#pdfExtractNote');
+
+  dropZone.addEventListener('click', ()=>fileInput.click());
+  dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('border-brand'); });
+  dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('border-brand'));
+  dropZone.addEventListener('drop', e=>{
+    e.preventDefault(); dropZone.classList.remove('border-brand');
+    if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+  let pendingCsvText = null;
+
+  async function handleFile(file){
+    errorEl.classList.add('hidden');
+    pdfNoteEl.classList.add('hidden');
+    const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
+    const isCsv = file.type==='text/csv' || /\.csv$/i.test(file.name);
+
+    if(isPdf){
+      pendingCsvText = null;
+      loadingEl.classList.remove('hidden');
+      lucide.createIcons();
+      try{
+        const text = await extractPdfText(file);
+        pasteArea.value = text;
+        pdfNoteEl.classList.remove('hidden');
+        dropZone.querySelector('p.font-medium').textContent = '✓ '+file.name+' — text extracted below';
+      } catch(err){
+        showError("Couldn't read that PDF (" + err.message + "). Try copying the transaction text from the PDF and pasting it below instead.");
+      } finally {
+        loadingEl.classList.add('hidden');
+      }
+    } else if(isCsv){
+      const reader = new FileReader();
+      reader.onload = e => {
+        pendingCsvText = e.target.result;
+        dropZone.querySelector('p.font-medium').textContent = '✓ '+file.name+' loaded';
+      };
+      reader.readAsText(file);
+    } else {
+      showError('Unsupported file type — please upload a CSV or PDF, or paste your statement text below.');
+    }
+  }
+
+  // Extract text from a PDF entirely in-browser using pdf.js, reconstructing
+  // rough lines from each page's text positions so bank-statement rows stay
+  // readable (rather than one long jumbled string).
+  async function extractPdfText(file){
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const allLines = [];
+    for(let p=1; p<=pdf.numPages; p++){
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const lineMap = new Map();
+      content.items.forEach(item=>{
+        const y = Math.round(item.transform[5]/2)*2; // bucket nearby y-values into the same line
+        if(!lineMap.has(y)) lineMap.set(y, []);
+        lineMap.get(y).push(item);
+      });
+      const sortedYs = Array.from(lineMap.keys()).sort((a,b)=>b-a); // top of page first
+      sortedYs.forEach(y=>{
+        const lineItems = lineMap.get(y).sort((a,b)=>a.transform[4]-b.transform[4]);
+        const lineText = lineItems.map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+        if(lineText) allLines.push(lineText);
+      });
+    }
+    return allLines.join('\n');
+  }
+
+  function showError(msg){
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+  }
+
+  container.querySelector('#analyzeBtn').addEventListener('click', ()=>{
+    errorEl.classList.add('hidden');
+    let transactions = [];
+
+    if(pendingCsvText){
+      const parsed = Papa.parse(pendingCsvText, { header:true, skipEmptyLines:true });
+      transactions = normalizeRows(parsed.data);
+    } else if(pasteArea.value.trim()){
+      const text = pasteArea.value.trim();
+      // try CSV-style parse first (in case pasted with commas), else fall back to loose line parsing
+      const parsed = Papa.parse(text, { header:true, skipEmptyLines:true });
+      if(parsed.data.length>0 && Object.keys(parsed.data[0]).length>=3){
+        transactions = normalizeRows(parsed.data);
+      }
+      if(transactions.length===0){
+        transactions = normalizeRows(parseLooseText(text));
+      }
+    } else {
+      showError('Upload a CSV file or paste some transactions first.');
+      return;
+    }
+
+    if(transactions.length===0){
+      showError("Couldn't find any valid transactions. Expected a Date, Description, and Amount in each row.");
+      return;
+    }
+
+    const subs = detectRecurring(transactions);
+    renderResults(transactions, subs);
+  });
+
+  function renderResults(transactions, subs){
+    container.querySelector('#analyzerInput').classList.add('hidden');
+    container.querySelector('#analyzerResults').classList.remove('hidden');
+
+    const totalMonthly = subs.reduce((s,x)=>s+x.monthlyCost,0);
+    container.querySelector('#statTotalMonthly').textContent = fmt(totalMonthly);
+    container.querySelector('#statSubCount').textContent = subs.length;
+    container.querySelector('#statTxnCount').textContent = transactions.length;
+
+    const list = container.querySelector('#subsList');
+    if(subs.length===0){
+      list.innerHTML = `<div class="px-6 py-10 text-center text-sm text-ink-soft dark:text-dark-soft">No recurring subscriptions detected — try a statement covering at least 2-3 months for best results.</div>`;
+    } else {
+      list.innerHTML = subs.map(s=>`
+        <div class="px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-brand-soft dark:bg-brand/10 flex items-center justify-center shrink-0">
+              <i data-lucide="repeat" class="w-4 h-4 text-brand"></i>
+            </div>
+            <div>
+              <p class="text-sm font-medium">${s.name} ${s.priceChanged ? '<span class="text-[10px] font-semibold text-neg ml-1">price changed</span>' : ''}</p>
+              <p class="text-xs text-ink-soft dark:text-dark-soft">${s.category} · ${s.frequency} · last charged ${s.lastDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="font-mono text-sm font-semibold">${fmt(s.lastAmount)}</p>
+            <p class="text-xs text-ink-soft dark:text-dark-soft">${fmt(s.monthlyCost)}/mo equiv.</p>
+          </div>
+        </div>
+      `).join('');
+    }
+    lucide.createIcons();
+
+    // Persist so the Overview dashboard can show this without re-running an analysis.
+    saveJSON('solokit_last_analysis', {
+      totalMonthly, subCount: subs.length, txnCount: transactions.length,
+      subs: subs.map(s=>({ name:s.name, category:s.category, frequency:s.frequency, monthlyCost:s.monthlyCost, lastAmount:s.lastAmount })),
+      analyzedAt: Date.now()
+    });
+  }
+
+  container.querySelector('#analyzeAgainBtn')?.addEventListener('click', ()=>{
+    container.querySelector('#analyzerInput').classList.remove('hidden');
+    container.querySelector('#analyzerResults').classList.add('hidden');
+    pendingCsvText = null;
+    pasteArea.value = '';
+    dropZone.querySelector('p.font-medium').textContent = 'Drop a CSV file here, or click to browse';
+  });
+
+  lucide.createIcons();
+};
+
+/* ===================== MODULE: OVERVIEW ===================== */
+
+MODULES.overview = function(container){
+  const fmt = n => '$'+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const invoices = loadJSON('solokit_invoices', []);
+  const timeEntries = loadJSON('solokit_time_entries', []);
+  const analysis = loadJSON('solokit_last_analysis', null);
+
+  const outstanding = invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+i.total,0);
+  const paidThisMonth = invoices.filter(i=>{
+    if(i.status!=='paid') return false;
+    const d = new Date(i.issueDate);
+    const now = new Date();
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  }).reduce((s,i)=>s+i.total,0);
+
+  const oneWeekAgo = Date.now() - 7*86400000;
+  const hoursThisWeek = timeEntries.filter(e=>e.startedAt>=oneWeekAgo).reduce((s,e)=>s+e.durationMs,0)/3600000;
+  const unbilledEarnings = timeEntries.reduce((s,e)=>s + (e.rate ? (e.durationMs/3600000)*e.rate : 0), 0);
+
+  const upcomingDue = invoices
+    .filter(i=>i.status!=='paid')
+    .sort((a,b)=> new Date(a.dueDate) - new Date(b.dueDate))
+    .slice(0,5);
+
+  const recentEntries = timeEntries.slice().sort((a,b)=>b.startedAt-a.startedAt).slice(0,5);
+
+  container.innerHTML = `
+    <div class="mb-8">
+      <h1 class="font-display font-700 text-2xl mb-1.5">Overview</h1>
+      <p class="text-sm text-ink-soft dark:text-dark-soft">Your business, at a glance.</p>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mb-8">
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+        <p class="text-xs text-ink-soft dark:text-dark-soft mb-1">Outstanding</p>
+        <p class="font-mono text-xl font-bold text-brand">${fmt(outstanding)}</p>
+      </div>
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+        <p class="text-xs text-ink-soft dark:text-dark-soft mb-1">Paid this month</p>
+        <p class="font-mono text-xl font-bold text-pos">${fmt(paidThisMonth)}</p>
+      </div>
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+        <p class="text-xs text-ink-soft dark:text-dark-soft mb-1">Hours this week</p>
+        <p class="font-mono text-xl font-bold">${hoursThisWeek.toFixed(1)}</p>
+      </div>
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+        <p class="text-xs text-ink-soft dark:text-dark-soft mb-1">Recurring spend/mo</p>
+        <p class="font-mono text-xl font-bold text-neg">${analysis ? fmt(analysis.totalMonthly) : '—'}</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-line dark:border-dark-line flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft">Upcoming due invoices</p>
+          <button data-module="invoice" class="ovNavBtn text-xs font-semibold text-brand">View all →</button>
+        </div>
+        <div class="divide-y divide-line dark:divide-dark-line">
+          ${upcomingDue.length===0 ? `<div class="px-6 py-8 text-center text-sm text-ink-soft dark:text-dark-soft">No unpaid invoices — you're all caught up.</div>` :
+            upcomingDue.map(inv=>`
+              <div class="px-6 py-3.5 flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium">${inv.clientName || 'Untitled client'}</p>
+                  <p class="text-xs text-ink-soft dark:text-dark-soft">Due ${inv.dueDate}</p>
+                </div>
+                <span class="font-mono text-sm">${fmt(inv.total)}</span>
+              </div>
+            `).join('')}
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-line dark:border-dark-line flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft">Recent time entries</p>
+          <button data-module="timer" class="ovNavBtn text-xs font-semibold text-brand">View all →</button>
+        </div>
+        <div class="divide-y divide-line dark:divide-dark-line">
+          ${recentEntries.length===0 ? `<div class="px-6 py-8 text-center text-sm text-ink-soft dark:text-dark-soft">No time tracked yet.</div>` :
+            recentEntries.map(e=>`
+              <div class="px-6 py-3.5 flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium">${e.project || 'Untitled'}</p>
+                  <p class="text-xs text-ink-soft dark:text-dark-soft">${new Date(e.startedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</p>
+                </div>
+                <span class="font-mono text-sm">${(e.durationMs/3600000).toFixed(2)} hrs</span>
+              </div>
+            `).join('')}
+        </div>
+      </div>
+
+    </div>
+
+    ${unbilledEarnings>0 ? `
+    <div class="bg-brand-soft dark:bg-brand/10 border border-brand/20 rounded-2xl p-5 mb-6 flex items-center justify-between">
+      <div>
+        <p class="text-sm font-semibold">You have ${fmt(unbilledEarnings)} in tracked time not yet invoiced</p>
+        <p class="text-xs text-ink-soft dark:text-dark-soft mt-0.5">Turn a tracked session into an invoice line item from the Time Tracker.</p>
+      </div>
+      <button data-module="timer" class="ovNavBtn shrink-0 px-4 py-2 rounded-lg bg-brand text-white text-xs font-semibold">Go to Time Tracker</button>
+    </div>` : ''}
+
+    <div class="flex gap-3">
+      <button data-module="invoice" class="ovNavBtn flex-1 py-3 rounded-lg bg-ink dark:bg-brand text-white text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+        <i data-lucide="file-plus" class="w-4 h-4"></i> New invoice
+      </button>
+      <button data-module="timer" class="ovNavBtn flex-1 py-3 rounded-lg border border-line dark:border-dark-line text-sm font-semibold hover:bg-white dark:hover:bg-dark-surface transition flex items-center justify-center gap-2">
+        <i data-lucide="play" class="w-4 h-4"></i> Start timer
+      </button>
+    </div>
+  `;
+
+  container.querySelectorAll('.ovNavBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=> document.querySelector(`.nav-btn[data-module="${btn.dataset.module}"]`).click());
+  });
+
+  lucide.createIcons();
+};
+
+/* ===================== MODULE: TAX SET-ASIDE CALCULATOR ===================== */
+
+const FEDERAL_BRACKETS_TAX = {
+  single: [[11925,.10],[48475,.12],[103350,.22],[197300,.24],[250525,.32],[626350,.35],[Infinity,.37]],
+  mfj:    [[23850,.10],[96950,.12],[206700,.22],[394600,.24],[501050,.32],[751600,.35],[Infinity,.37]],
+  hoh:    [[17000,.10],[64850,.12],[103350,.22],[197300,.24],[250500,.32],[626350,.35],[Infinity,.37]]
+};
+const STD_DEDUCTION_TAX = { single: 15000, mfj: 30000, hoh: 22500 };
+const SE_SS_WAGE_BASE = 176100;
+
+function bracketTaxCalc(taxable, brackets){
+  if(taxable<=0) return 0;
+  let tax=0, prev=0;
+  for(const [upTo,rate] of brackets){
+    const slice = Math.min(taxable,upTo)-prev;
+    if(slice>0) tax += slice*rate;
+    if(taxable<=upTo) break;
+    prev = upTo;
+  }
+  return tax;
+}
+
+function calcSelfEmploymentTax(netIncome, filing){
+  const seBase = Math.max(netIncome,0) * 0.9235;
+  const ssPortion = Math.min(seBase, SE_SS_WAGE_BASE) * 0.124;
+  const medicarePortion = seBase * 0.029;
+  const seTax = ssPortion + medicarePortion;
+  const halfSeDeduction = seTax/2;
+  const taxableIncome = Math.max(netIncome - halfSeDeduction - STD_DEDUCTION_TAX[filing], 0);
+  const fedTax = bracketTaxCalc(taxableIncome, FEDERAL_BRACKETS_TAX[filing]);
+  const total = seTax + fedTax;
+  return { seTax, fedTax, total, taxableIncome };
+}
+
+// UK: sole trader Income Tax + Class 4 National Insurance on net profit, 2026/27 bands.
+const UK_INCOME_BANDS = [[12570,0],[50270,.20],[125140,.40],[Infinity,.45]];
+const UK_CLASS4_NI = [[12570,0],[50270,.06],[Infinity,.02]];
+function calcUKTax(profit){
+  const incomeTax = bracketTaxCalc(profit, UK_INCOME_BANDS);
+  const ni = bracketTaxCalc(profit, UK_CLASS4_NI);
+  return { incomeTax, ni, total: incomeTax+ni };
+}
+
+// India: Section 44ADA presumptive taxation (50% of gross receipts as deemed profit,
+// for specified professionals) + FY2025-26 new-regime slabs + Section 87A rebate
+// (nil tax if taxable income ≤ ₹12L) + 4% health & education cess.
+const INDIA_NEW_REGIME_SLABS = [[400000,0],[800000,.05],[1200000,.10],[1600000,.15],[2000000,.20],[2400000,.25],[Infinity,.30]];
+function calcIndiaTax(grossReceipts){
+  const taxable = grossReceipts * 0.5;
+  if(taxable <= 1200000) return { taxable, baseTax:0, cess:0, total:0, rebateApplied:true };
+  const baseTax = bracketTaxCalc(taxable, INDIA_NEW_REGIME_SLABS);
+  const cess = baseTax * 0.04;
+  return { taxable, baseTax, cess, total: baseTax+cess, rebateApplied:false };
+}
+
+// Pakistan: Section 154A final tax regime on IT/ITeS export income received via
+// banking channels — flat rate on gross, no further income tax owed on that income.
+function calcPakistanTax(exportIncome, psebRegistered){
+  const rate = psebRegistered ? 0.0025 : 0.01;
+  return { total: exportIncome*rate, rate };
+}
+
+MODULES.taxsaver = function(container){
+  const fmtUSD = n => '$'+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtGBP = n => '£'+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtINR = n => '₹'+(Math.round((n||0)*100)/100).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtPKR = n => 'Rs '+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  container.innerHTML = `
+    <div class="mb-8">
+      <h1 class="font-display font-700 text-2xl mb-1.5">Tax Set-Aside Calculator</h1>
+      <p class="text-sm text-ink-soft dark:text-dark-soft">Pick your country for a real tax-rule estimate, or use the generic rule of thumb — then see what to set aside.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-6 space-y-5 h-fit">
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Country / tax regime</label>
+          <select id="tsCountry" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+            <option value="US">United States — self-employment tax</option>
+            <option value="UK">United Kingdom — sole trader (Income Tax + Class 4 NI)</option>
+            <option value="IN">India — freelancer (Section 44ADA presumptive)</option>
+            <option value="PK">Pakistan — IT/export freelancer (Section 154A)</option>
+            <option value="OTHER">Other country — rule of thumb %</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label id="tsIncomeLabel" class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Estimated net self-employment income this year ($)</label>
+          <input type="number" id="tsIncome" value="60000" min="0" step="500" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-lg font-mono tabular focus:outline-none focus:ring-2 focus:ring-brand/40">
+          <p id="tsIncomeHint" class="text-xs text-ink-soft dark:text-dark-soft mt-1.5">Revenue minus business expenses — not your invoice total.</p>
+        </div>
+
+        <div id="tsFilingRow">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Filing status</label>
+          <select id="tsFiling" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+            <option value="single">Single</option>
+            <option value="mfj">Married filing jointly</option>
+            <option value="hoh">Head of household</option>
+          </select>
+        </div>
+
+        <div id="tsPakistanRow" class="hidden">
+          <div class="toggle-row flex items-start gap-3 p-3.5 bg-paper dark:bg-dark-bg border border-line dark:border-dark-line rounded-lg">
+            <input type="checkbox" id="tsPseb" checked class="mt-0.5 w-4 h-4 accent-brand">
+            <div>
+              <p class="text-xs font-semibold">PSEB-registered</p>
+              <p class="text-xs text-ink-soft dark:text-dark-soft mt-0.5">0.25% final tax if registered with the Pakistan Software Export Board; 1% (adjustable withholding) if not.</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="tsIndiaNote" class="hidden text-xs text-ink-soft dark:text-dark-soft bg-paper dark:bg-dark-bg border border-line dark:border-dark-line rounded-lg p-3.5">
+          Assumes Section 44ADA eligibility (specified professionals — IT, consulting, design, etc. — with receipts under ₹75 lakh) and the FY2025-26 new regime with the Section 87A rebate.
+        </div>
+
+        <div id="tsOtherRow" class="hidden">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Set-aside percentage</label>
+          <input type="range" id="tsIntlPct" min="15" max="40" value="27" class="w-full accent-brand">
+          <p class="text-xs text-ink-soft dark:text-dark-soft mt-1"><span id="tsIntlPctLabel">27</span>% — a common rule of thumb; check your local tax authority for your actual rate.</p>
+        </div>
+
+      </div>
+
+      <div class="lg:col-span-3">
+        <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-6 mb-4">
+          <div class="text-center mb-6 pb-6 border-b border-dashed border-line dark:border-dark-line">
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-2">Recommended to set aside</p>
+            <p class="font-mono text-4xl font-bold text-brand" id="tsSetAsideAmt">$0.00</p>
+            <p class="text-sm text-ink-soft dark:text-dark-soft mt-1" id="tsSetAsideRate">0% of net income</p>
+          </div>
+
+          <div id="tsBreakdown" class="space-y-3"></div>
+        </div>
+
+        <div id="tsQuarterlyCard" class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl overflow-hidden">
+          <div class="px-6 py-4 border-b border-line dark:border-dark-line">
+            <p id="tsQuarterlyTitle" class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft">Quarterly estimated payments (2026)</p>
+          </div>
+          <div id="tsQuarterlyList" class="divide-y divide-line dark:divide-dark-line"></div>
+        </div>
+      </div>
+    </div>
+
+    <p id="tsDisclaimer" class="text-xs text-ink-soft dark:text-dark-soft mt-6 max-w-2xl">Estimate only. Not tax advice — consult a qualified tax professional for your actual filing.</p>
+  `;
+
+  const US_QUARTERS = [
+    { label:'Q1 — due Apr 15, 2026', pct: 0.25 },
+    { label:'Q2 — due Jun 15, 2026', pct: 0.25 },
+    { label:'Q3 — due Sep 15, 2026', pct: 0.25 },
+    { label:'Q4 — due Jan 15, 2027', pct: 0.25 },
+  ];
+  const IN_QUARTERS = [
+    { label:'15 Jun 2026 (15%)', pct: 0.15 },
+    { label:'15 Sep 2026 (45% cumulative)', pct: 0.30 },
+    { label:'15 Dec 2026 (75% cumulative)', pct: 0.30 },
+    { label:'15 Mar 2027 (100% cumulative)', pct: 0.25 },
+  ];
+
+  function setVisibility(country){
+    container.querySelector('#tsFilingRow').classList.toggle('hidden', country!=='US');
+    container.querySelector('#tsPakistanRow').classList.toggle('hidden', country!=='PK');
+    container.querySelector('#tsIndiaNote').classList.toggle('hidden', country!=='IN');
+    container.querySelector('#tsOtherRow').classList.toggle('hidden', country!=='OTHER');
+
+    const incomeLabel = container.querySelector('#tsIncomeLabel');
+    const incomeHint = container.querySelector('#tsIncomeHint');
+    const disclaimer = container.querySelector('#tsDisclaimer');
+    if(country==='US'){
+      incomeLabel.textContent = 'Estimated net self-employment income this year ($)';
+      incomeHint.textContent = 'Revenue minus business expenses — not your invoice total.';
+      disclaimer.textContent = 'Estimate only, based on 2025 US federal tax brackets and the standard deduction, and assumes self-employment is your only income. Not tax advice — consult a tax professional.';
+    } else if(country==='UK'){
+      incomeLabel.textContent = 'Estimated net profit this year (£)';
+      incomeHint.textContent = 'Turnover minus allowable business expenses.';
+      disclaimer.textContent = 'Estimate only, based on 2026/27 HMRC Income Tax bands and Class 4 National Insurance for England, Wales and Northern Ireland (Scotland uses different bands). Not tax advice — consult a tax professional.';
+    } else if(country==='IN'){
+      incomeLabel.textContent = 'Estimated gross freelance receipts this year (₹)';
+      incomeHint.textContent = 'Total billed to clients, before the 44ADA 50% presumption is applied.';
+      disclaimer.textContent = 'Estimate only, assuming Section 44ADA presumptive taxation and FY2025-26 new-regime slabs with the Section 87A rebate. Not tax advice — consult a Chartered Accountant.';
+    } else if(country==='PK'){
+      incomeLabel.textContent = 'Estimated export income from foreign clients this year (Rs)';
+      incomeHint.textContent = 'Income received through proper banking channels from clients abroad.';
+      disclaimer.textContent = "Estimate only, based on the Section 154A final tax regime for IT/ITeS export income (extended through Tax Year 2029). Local (non-export) income is taxed separately under standard slabs and isn't covered here. Not tax advice — consult a tax professional.";
+    } else {
+      incomeLabel.textContent = 'Estimated net income this year';
+      incomeHint.textContent = 'Revenue minus business expenses.';
+      disclaimer.textContent = "A generic percentage rule of thumb — not based on any specific country's tax code. Check your local tax authority for your actual obligation.";
+    }
+  }
+
+  function calc(){
+    const country = container.querySelector('#tsCountry').value;
+    const income = parseFloat(container.querySelector('#tsIncome').value)||0;
+    setVisibility(country);
+
+    const breakdown = container.querySelector('#tsBreakdown');
+    const qList = container.querySelector('#tsQuarterlyList');
+    const qTitle = container.querySelector('#tsQuarterlyTitle');
+    let total = 0, rate = 0, fmt = fmtUSD;
+
+    if(country==='US'){
+      fmt = fmtUSD;
+      const filing = container.querySelector('#tsFiling').value;
+      const r = calcSelfEmploymentTax(income, filing);
+      total = r.total;
+      rate = income>0 ? (total/income*100) : 0;
+      breakdown.innerHTML = `
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">Self-employment tax (15.3%)</span><span class="font-mono">${fmt(r.seTax)}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">Estimated federal income tax</span><span class="font-mono">${fmt(r.fedTax)}</span></div>
+        <div class="flex justify-between text-sm font-semibold pt-2 border-t border-line dark:border-dark-line"><span>Total estimated tax</span><span class="font-mono">${fmt(total)}</span></div>
+      `;
+      qTitle.textContent = 'Quarterly estimated payments (2026)';
+      qList.innerHTML = US_QUARTERS.map(q=>`<div class="px-6 py-3.5 flex items-center justify-between"><span class="text-sm text-ink-soft dark:text-dark-soft">${q.label}</span><span class="font-mono text-sm font-semibold">${fmt(total*q.pct)}</span></div>`).join('');
+
+    } else if(country==='UK'){
+      fmt = fmtGBP;
+      const r = calcUKTax(income);
+      total = r.total;
+      rate = income>0 ? (total/income*100) : 0;
+      breakdown.innerHTML = `
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">Income Tax</span><span class="font-mono">${fmt(r.incomeTax)}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">Class 4 National Insurance</span><span class="font-mono">${fmt(r.ni)}</span></div>
+        <div class="flex justify-between text-sm font-semibold pt-2 border-t border-line dark:border-dark-line"><span>Total estimated tax</span><span class="font-mono">${fmt(total)}</span></div>
+      `;
+      qTitle.textContent = 'Self Assessment payment dates';
+      qList.innerHTML = `
+        <div class="px-6 py-3.5 flex items-center justify-between"><span class="text-sm text-ink-soft dark:text-dark-soft">31 Jan 2027 — balancing payment + 1st payment on account</span><span class="font-mono text-sm font-semibold">${fmt(total*0.75)}</span></div>
+        <div class="px-6 py-3.5 flex items-center justify-between"><span class="text-sm text-ink-soft dark:text-dark-soft">31 Jul 2027 — 2nd payment on account</span><span class="font-mono text-sm font-semibold">${fmt(total*0.25)}</span></div>
+      `;
+
+    } else if(country==='IN'){
+      fmt = fmtINR;
+      const r = calcIndiaTax(income);
+      total = r.total;
+      rate = income>0 ? (total/income*100) : 0;
+      breakdown.innerHTML = r.rebateApplied ? `
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">44ADA deemed profit (50%)</span><span class="font-mono">${fmt(r.taxable)}</span></div>
+        <div class="flex justify-between text-sm text-pos"><span>Section 87A rebate applies</span><span class="font-mono">${fmt(0)}</span></div>
+        <div class="flex justify-between text-sm font-semibold pt-2 border-t border-line dark:border-dark-line"><span>Total estimated tax</span><span class="font-mono">${fmt(0)}</span></div>
+      ` : `
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">44ADA deemed profit (50%)</span><span class="font-mono">${fmt(r.taxable)}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">Income tax (new regime slabs)</span><span class="font-mono">${fmt(r.baseTax)}</span></div>
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">Health &amp; education cess (4%)</span><span class="font-mono">${fmt(r.cess)}</span></div>
+        <div class="flex justify-between text-sm font-semibold pt-2 border-t border-line dark:border-dark-line"><span>Total estimated tax</span><span class="font-mono">${fmt(total)}</span></div>
+      `;
+      qTitle.textContent = 'Advance tax installments (FY2026-27)';
+      qList.innerHTML = IN_QUARTERS.map(q=>`<div class="px-6 py-3.5 flex items-center justify-between"><span class="text-sm text-ink-soft dark:text-dark-soft">${q.label}</span><span class="font-mono text-sm font-semibold">${fmt(total*q.pct)}</span></div>`).join('');
+
+    } else if(country==='PK'){
+      fmt = fmtPKR;
+      const pseb = container.querySelector('#tsPseb').checked;
+      const r = calcPakistanTax(income, pseb);
+      total = r.total;
+      rate = r.rate*100;
+      breakdown.innerHTML = `
+        <div class="flex justify-between text-sm"><span class="text-ink-soft dark:text-dark-soft">${pseb ? 'PSEB final tax (0.25%)' : 'Withholding tax (1%, adjustable)'}</span><span class="font-mono">${fmt(total)}</span></div>
+        <div class="flex justify-between text-sm font-semibold pt-2 border-t border-line dark:border-dark-line"><span>Total on this export income</span><span class="font-mono">${fmt(total)}</span></div>
+      `;
+      qTitle.textContent = 'When this is paid';
+      qList.innerHTML = `<div class="px-6 py-3.5 text-sm text-ink-soft dark:text-dark-soft">Deducted automatically by your bank at the time each foreign payment is credited — no separate quarterly filing needed for this income.</div>`;
+
+    } else {
+      fmt = fmtUSD;
+      const pct = parseFloat(container.querySelector('#tsIntlPct').value);
+      container.querySelector('#tsIntlPctLabel').textContent = pct;
+      total = income * (pct/100);
+      rate = pct;
+      breakdown.innerHTML = `<div class="flex justify-between text-sm font-semibold"><span>Set-aside (${pct}% of net income)</span><span class="font-mono">${fmt(total)}</span></div>`;
+      qTitle.textContent = 'Suggested quarterly set-aside';
+      qList.innerHTML = US_QUARTERS.map(q=>`<div class="px-6 py-3.5 flex items-center justify-between"><span class="text-sm text-ink-soft dark:text-dark-soft">${q.label.replace(/ — due.*/, '')}</span><span class="font-mono text-sm font-semibold">${fmt(total*q.pct)}</span></div>`).join('');
+    }
+
+    container.querySelector('#tsSetAsideAmt').textContent = fmt(total);
+    container.querySelector('#tsSetAsideRate').textContent = rate.toFixed(1)+'% of net income';
+  }
+
+  ['tsCountry','tsIncome','tsFiling','tsPseb','tsIntlPct'].forEach(id=>{
+    container.querySelector('#'+id).addEventListener('input', calc);
+    container.querySelector('#'+id).addEventListener('change', calc);
+  });
+
+  setVisibility('US');
+  calc();
+  lucide.createIcons();
+};
+
+
+MODULES.fees = function(container){
+  container.innerHTML = `
+    <div class="mb-8">
+      <h1 class="font-display font-700 text-2xl mb-1.5">Platform Fee Calculator</h1>
+      <p class="text-sm text-ink-soft dark:text-dark-soft">See exactly how much a platform takes, and what you actually keep.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-6 space-y-5 h-fit">
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Platform</label>
+          <select id="feePlatform" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+            ${Object.entries(PLATFORMS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('')}
+          </select>
+        </div>
+
+        <div id="feeCustomRow" class="hidden grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Fee %</label>
+            <input type="number" id="feeCustomPct" value="0" min="0" step="0.1" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/40">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Flat fee ($)</label>
+            <input type="number" id="feeCustomFlat" value="0" min="0" step="0.01" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/40">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Calculate from</label>
+          <div class="flex border border-line dark:border-dark-line rounded-lg overflow-hidden">
+            <button type="button" data-mode="gross" class="feeModeBtn flex-1 py-2 text-xs font-semibold bg-ink dark:bg-brand text-white">Amount client pays</button>
+            <button type="button" data-mode="net" class="feeModeBtn flex-1 py-2 text-xs font-semibold text-ink-soft dark:text-dark-soft">Amount I want to keep</button>
+          </div>
+        </div>
+
+        <div>
+          <label id="feeAmountLabel" class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Amount ($)</label>
+          <input type="number" id="feeAmount" value="1000" min="0" step="1" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-lg font-mono tabular focus:outline-none focus:ring-2 focus:ring-brand/40">
+        </div>
+
+        <p id="feePlatformNote" class="text-xs text-ink-soft dark:text-dark-soft leading-relaxed"></p>
+      </div>
+
+      <div class="lg:col-span-3 bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-6">
+        <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-5">Breakdown</p>
+        <div class="space-y-4">
+          <div class="flex justify-between items-baseline pb-4 border-b border-dashed border-line dark:border-dark-line">
+            <span class="text-sm text-ink-soft dark:text-dark-soft">Client pays</span>
+            <span id="feeGrossOut" class="font-mono tabular text-lg font-semibold">$0.00</span>
+          </div>
+          <div class="flex justify-between items-baseline">
+            <span class="text-sm text-ink-soft dark:text-dark-soft">Platform fee</span>
+            <span id="feeAmountOut" class="font-mono tabular text-lg font-semibold text-neg">−$0.00</span>
+          </div>
+          <div class="flex justify-between items-baseline pb-4 border-b border-dashed border-line dark:border-dark-line">
+            <span class="text-sm text-ink-soft dark:text-dark-soft">Effective fee rate</span>
+            <span id="feeRateOut" class="font-mono tabular text-sm">0.0%</span>
+          </div>
+          <div class="flex justify-between items-baseline bg-pos/5 -mx-2 px-2 py-3 rounded-lg">
+            <span class="text-sm font-semibold">You keep</span>
+            <span id="feeNetOut" class="font-mono tabular text-2xl font-bold text-pos">$0.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let feeMode = 'gross';
+  const platformSel = container.querySelector('#feePlatform');
+  const customRow = container.querySelector('#feeCustomRow');
+  const amountInput = container.querySelector('#feeAmount');
+  const amountLabel = container.querySelector('#feeAmountLabel');
+
+  function calcFees(){
+    const key = platformSel.value;
+    const isCustom = key==='custom';
+    customRow.classList.toggle('hidden', !isCustom);
+    const pct = isCustom ? (parseFloat(container.querySelector('#feeCustomPct').value)||0) : PLATFORMS[key].pct;
+    const flat = isCustom ? (parseFloat(container.querySelector('#feeCustomFlat').value)||0) : PLATFORMS[key].flat;
+    container.querySelector('#feePlatformNote').textContent = PLATFORMS[key].note;
+
+    const amount = parseFloat(amountInput.value)||0;
+    let gross, fee, net;
+
+    if(feeMode==='gross'){
+      gross = amount;
+      fee = gross*(pct/100) + flat;
+      net = gross - fee;
+    } else {
+      // amount = desired net; solve gross algebraically: gross*(1-pct/100) - flat = net
+      net = amount;
+      gross = (net + flat) / (1 - pct/100);
+      fee = gross - net;
+    }
+
+    const fmt = n => '$'+(Math.round(n*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    container.querySelector('#feeGrossOut').textContent = fmt(gross);
+    container.querySelector('#feeAmountOut').textContent = '−'+fmt(fee);
+    container.querySelector('#feeNetOut').textContent = fmt(net);
+    container.querySelector('#feeRateOut').textContent = gross>0 ? ((fee/gross)*100).toFixed(1)+'%' : '0.0%';
+  }
+
+  container.querySelectorAll('.feeModeBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      feeMode = btn.dataset.mode;
+      container.querySelectorAll('.feeModeBtn').forEach(b=>{
+        const active = b===btn;
+        b.classList.toggle('bg-ink', active); b.classList.toggle('dark:bg-brand', active); b.classList.toggle('text-white', active);
+        b.classList.toggle('text-ink-soft', !active); b.classList.toggle('dark:text-dark-soft', !active);
+      });
+      amountLabel.textContent = feeMode==='gross' ? 'Amount client pays ($)' : 'Amount I want to keep ($)';
+      calcFees();
+    });
+  });
+
+  [platformSel, amountInput].forEach(el=>el.addEventListener('input', calcFees));
+  container.querySelector('#feeCustomPct')?.addEventListener('input', calcFees);
+  container.querySelector('#feeCustomFlat')?.addEventListener('input', calcFees);
+  platformSel.addEventListener('change', calcFees);
+
+  calcFees();
+};
+
+/* ===================== MODULE: TIME TRACKER ===================== */
+
+/* ===================== MODULE: INVOICE GENERATOR ===================== */
+
+MODULES.invoice = function(container){
+  const BIZ_KEY = 'solokit_business_info';
+  const CLIENTS_KEY = 'solokit_clients';
+  const INVOICES_KEY = 'solokit_invoices';
+  const COUNTER_KEY = 'solokit_invoice_counter';
+  const PENDING_ITEM_KEY = 'solokit_pending_invoice_item';
+
+  const CURRENCIES = {
+    USD:{symbol:'$', name:'US Dollar'}, EUR:{symbol:'€', name:'Euro'}, GBP:{symbol:'£', name:'British Pound'},
+    PKR:{symbol:'₨', name:'Pakistani Rupee'}, INR:{symbol:'₹', name:'Indian Rupee'}, CAD:{symbol:'C$', name:'Canadian Dollar'},
+    AUD:{symbol:'A$', name:'Australian Dollar'}, PHP:{symbol:'₱', name:'Philippine Peso'}, AED:{symbol:'د.إ', name:'UAE Dirham'},
+    SGD:{symbol:'S$', name:'Singapore Dollar'}, NGN:{symbol:'₦', name:'Nigerian Naira'}, ZAR:{symbol:'R', name:'South African Rand'},
+  };
+
+  function esc(str){ const d=document.createElement('div'); d.textContent = str==null?'':String(str); return d.innerHTML; }
+  function fmt(n, code){
+    const sym = (CURRENCIES[code]||CURRENCIES.USD).symbol;
+    return sym+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function hexToRgb(hex){
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||'#E8791A');
+    return m ? { r:parseInt(m[1],16), g:parseInt(m[2],16), b:parseInt(m[3],16) } : { r:232, g:121, b:26 };
+  }
+
+  // jsPDF's built-in fonts (Helvetica) can only render WinAnsi/Latin-1 characters.
+  // Symbols like ₨ ₹ ₦ ₱ د.إ fall outside that set and render as garbled glyphs
+  // (e.g. "¨") in the downloaded PDF, even though they look fine on-screen.
+  // Use plain-text equivalents for the PDF only; the on-screen preview keeps the real symbol.
+  const PDF_SAFE_SYMBOLS = {
+    USD:'$', EUR:'€', GBP:'£', PKR:'Rs ', INR:'Rs ', CAD:'C$', AUD:'A$',
+    PHP:'PHP ', AED:'AED ', SGD:'S$', NGN:'NGN ', ZAR:'R'
+  };
+  function fmtPdf(n, code){
+    const sym = PDF_SAFE_SYMBOLS[code] || (CURRENCIES[code]||CURRENCIES.USD).symbol;
+    return sym+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+
+  function nextInvoiceNumber(){
+    let n = loadJSON(COUNTER_KEY, 1000);
+    n += 1;
+    saveJSON(COUNTER_KEY, n);
+    return 'INV-'+n;
+  }
+
+  const biz = loadJSON(BIZ_KEY, { name:'', email:'', address:'', logo:'', accentColor:'#E8791A', currency:'USD' });
+  const pendingItem = loadJSON(PENDING_ITEM_KEY, null);
+  if(pendingItem) localStorage.removeItem(PENDING_ITEM_KEY);
+
+  let items = pendingItem ? [pendingItem] : [{ desc:'', qty:1, rate:0 }];
+  let itemSeq = items.length;
+  let logoDataUrl = biz.logo || '';
+
+  container.innerHTML = `
+    <div class="mb-8 flex items-start justify-between">
+      <div>
+        <h1 class="font-display font-700 text-2xl mb-1.5">Invoice Generator</h1>
+        <p class="text-sm text-ink-soft dark:text-dark-soft">Create, download, and track invoices — nothing leaves your browser.</p>
+      </div>
+      <div class="flex border border-line dark:border-dark-line rounded-lg overflow-hidden">
+        <button data-view="create" class="invViewBtn px-4 py-2 text-xs font-semibold bg-ink dark:bg-brand text-white">New invoice</button>
+        <button data-view="list" class="invViewBtn px-4 py-2 text-xs font-semibold text-ink-soft dark:text-dark-soft">All invoices</button>
+      </div>
+    </div>
+
+    <div id="invCreateView">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        <div class="lg:col-span-2 space-y-5">
+
+          <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-3">Your business</p>
+            <div class="space-y-2.5">
+              <input type="text" id="invBizName" placeholder="Business or your name" value="${esc(biz.name)}" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+              <input type="email" id="invBizEmail" placeholder="Email" value="${esc(biz.email)}" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+              <textarea id="invBizAddress" placeholder="Address (optional)" rows="2" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">${esc(biz.address)}</textarea>
+              <input type="text" id="invBizTaxId" placeholder="Tax ID / VAT / GSTIN / NTN (optional)" value="${esc(biz.taxId||'')}" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+
+              <div class="flex items-center gap-3 pt-1">
+                <div id="logoPreviewWrap" class="w-11 h-11 rounded-lg border border-line dark:border-dark-line flex items-center justify-center overflow-hidden shrink-0 bg-paper dark:bg-dark-bg">
+                  ${logoDataUrl ? `<img id="logoPreviewImg" src="${logoDataUrl}" class="w-full h-full object-contain">` : `<i data-lucide="image" class="w-4 h-4 text-ink-soft dark:text-dark-soft"></i>`}
+                </div>
+                <button type="button" id="invLogoBtn" class="text-xs font-semibold text-brand">Upload logo</button>
+                <input type="file" id="invLogoInput" accept="image/png,image/jpeg,image/svg+xml" class="hidden">
+                <span class="text-ink-soft dark:text-dark-soft text-xs">·</span>
+                <label class="flex items-center gap-1.5 text-xs text-ink-soft dark:text-dark-soft cursor-pointer">
+                  Accent
+                  <input type="color" id="invAccentColor" value="${esc(biz.accentColor||'#E8791A')}" class="w-6 h-6 rounded border border-line dark:border-dark-line cursor-pointer">
+                </label>
+              </div>
+              <p class="text-[10px] text-ink-soft dark:text-dark-soft">PNG or JPG, square works best · recommended 200×200px · max 2MB</p>
+              <p id="invLogoWarning" class="text-[10px] text-neg hidden"></p>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-3">Bill to</p>
+            <select id="invClientSelect" class="w-full mb-2.5 px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+              <option value="">+ New client</option>
+            </select>
+            <div class="space-y-2.5">
+              <input type="text" id="invClientName" placeholder="Client name" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+              <input type="email" id="invClientEmail" placeholder="Client email" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+              <textarea id="invClientAddress" placeholder="Client address (optional)" rows="2" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40"></textarea>
+              <input type="text" id="invClientTaxId" placeholder="Client Tax ID / VAT number (optional)" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-5">
+            <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-3">Details</p>
+            <div class="mb-2.5">
+              <label class="block text-[11px] text-ink-soft dark:text-dark-soft mb-1">Currency</label>
+              <select id="invCurrency" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+                ${Object.entries(CURRENCIES).map(([code,c])=>`<option value="${code}" ${code===(biz.currency||'USD') ? 'selected':''}>${code} (${c.symbol}) — ${c.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5 mb-2.5">
+              <div>
+                <label class="block text-[11px] text-ink-soft dark:text-dark-soft mb-1">Issue date</label>
+                <input type="date" id="invIssueDate" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+              </div>
+              <div>
+                <label class="block text-[11px] text-ink-soft dark:text-dark-soft mb-1">Due date</label>
+                <input type="date" id="invDueDate" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-[11px] text-ink-soft dark:text-dark-soft mb-1">Tax %</label>
+                <input type="number" id="invTaxPct" value="0" min="0" step="0.1" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/40">
+              </div>
+              <div>
+                <label class="block text-[11px] text-ink-soft dark:text-dark-soft mb-1">Discount %</label>
+                <input type="number" id="invDiscountPct" value="0" min="0" step="0.1" class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/40">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="lg:col-span-3">
+          <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-6" id="invPreviewCard">
+
+            <div class="flex justify-between items-start mb-6 pb-6 border-b border-line dark:border-dark-line">
+              <div class="flex items-center gap-3">
+                <img id="pvLogoImg" src="${logoDataUrl}" class="w-10 h-10 object-contain rounded ${logoDataUrl ? '':'hidden'}">
+                <div>
+                  <p class="font-display font-700 text-lg" id="pvBizName">Your Business</p>
+                  <p class="text-xs text-ink-soft dark:text-dark-soft" id="pvBizEmail"></p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="font-display font-700 text-xl" id="pvInvoiceLabel" style="color:${esc(biz.accentColor||'#E8791A')}">INVOICE</p>
+                <p class="text-xs font-mono text-ink-soft dark:text-dark-soft" id="pvInvNumber">INV-1001</p>
+              </div>
+            </div>
+
+            <div class="flex justify-between mb-6 text-sm">
+              <div>
+                <p class="text-[11px] uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1">Bill to</p>
+                <p class="font-medium" id="pvClientName">—</p>
+                <p class="text-xs text-ink-soft dark:text-dark-soft" id="pvClientEmail"></p>
+                <p class="text-xs text-ink-soft dark:text-dark-soft hidden" id="pvClientTaxIdWrap">Tax ID: <span id="pvClientTaxId"></span></p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-ink-soft dark:text-dark-soft">Issued: <span id="pvIssueDate" class="font-mono">—</span></p>
+                <p class="text-xs text-ink-soft dark:text-dark-soft">Due: <span id="pvDueDate" class="font-mono">—</span></p>
+                <p class="text-xs text-ink-soft dark:text-dark-soft hidden" id="pvBizTaxIdWrap">Tax ID: <span id="pvBizTaxId"></span></p>
+              </div>
+            </div>
+
+            <div class="mb-2">
+              <div class="grid grid-cols-12 gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft pb-2 border-b border-line dark:border-dark-line">
+                <div class="col-span-5">Description</div>
+                <div class="col-span-2 text-right">Qty</div>
+                <div class="col-span-2 text-right">Rate</div>
+                <div class="col-span-2 text-right">Amount</div>
+                <div class="col-span-1"></div>
+              </div>
+              <div id="invItemsRows"></div>
+            </div>
+
+            <button id="invAddItemBtn" type="button" class="text-xs font-semibold text-brand flex items-center gap-1 mt-3 mb-6">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add line item
+            </button>
+
+            <div class="flex justify-end mb-6">
+              <div class="w-56 space-y-1.5 text-sm">
+                <div class="flex justify-between"><span class="text-ink-soft dark:text-dark-soft">Subtotal</span><span class="font-mono" id="pvSubtotal">$0.00</span></div>
+                <div class="flex justify-between"><span class="text-ink-soft dark:text-dark-soft">Discount</span><span class="font-mono" id="pvDiscount">−$0.00</span></div>
+                <div class="flex justify-between"><span class="text-ink-soft dark:text-dark-soft">Tax</span><span class="font-mono" id="pvTax">+$0.00</span></div>
+                <div class="flex justify-between text-base font-bold pt-1.5 border-t border-line dark:border-dark-line"><span>Total</span><span class="font-mono" id="pvTotal">$0.00</span></div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Notes / payment terms</label>
+              <textarea id="invNotes" rows="2" placeholder="e.g. Payment due within 14 days via bank transfer." class="w-full px-3 py-2 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-xs focus:outline-none focus:ring-2 focus:ring-brand/40"></textarea>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-4">
+            <button id="invSaveBtn" class="flex-1 py-2.5 rounded-lg border border-line dark:border-dark-line text-sm font-semibold hover:bg-white dark:hover:bg-dark-surface transition flex items-center justify-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i> Save invoice
+            </button>
+            <button id="invPdfBtn" class="flex-1 py-2.5 rounded-lg bg-ink dark:bg-brand text-white text-sm font-semibold hover:opacity-90 transition flex items-center justify-center gap-2">
+              <i data-lucide="download" class="w-4 h-4"></i> Download PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="invListView" class="hidden bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-line dark:border-dark-line flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft">Saved invoices</p>
+        <p class="text-sm font-mono tabular" id="invListTotal">$0.00 outstanding</p>
+      </div>
+      <div id="invListRows" class="divide-y divide-line dark:divide-dark-line"></div>
+    </div>
+  `;
+
+  /* ---- view switching ---- */
+  container.querySelectorAll('.invViewBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const view = btn.dataset.view;
+      container.querySelectorAll('.invViewBtn').forEach(b=>{
+        const active = b===btn;
+        b.classList.toggle('bg-ink', active); b.classList.toggle('dark:bg-brand', active); b.classList.toggle('text-white', active);
+        b.classList.toggle('text-ink-soft', !active); b.classList.toggle('dark:text-dark-soft', !active);
+      });
+      container.querySelector('#invCreateView').classList.toggle('hidden', view!=='create');
+      container.querySelector('#invListView').classList.toggle('hidden', view!=='list');
+      if(view==='list') renderInvoiceList();
+    });
+  });
+
+  /* ---- client list ---- */
+  const clientSelect = container.querySelector('#invClientSelect');
+  function refreshClientOptions(){
+    const clients = loadJSON(CLIENTS_KEY, []);
+    clientSelect.innerHTML = '<option value="">+ New client</option>' +
+      clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  }
+  refreshClientOptions();
+  clientSelect.addEventListener('change', ()=>{
+    const clients = loadJSON(CLIENTS_KEY, []);
+    const c = clients.find(x=>x.id===clientSelect.value);
+    container.querySelector('#invClientName').value = c ? c.name : '';
+    container.querySelector('#invClientEmail').value = c ? c.email : '';
+    container.querySelector('#invClientAddress').value = c ? c.address : '';
+    container.querySelector('#invClientTaxId').value = c ? (c.taxId||'') : '';
+    updatePreview();
+  });
+
+  /* ---- logo upload + accent color ---- */
+  const logoBtn = container.querySelector('#invLogoBtn');
+  const logoInput = container.querySelector('#invLogoInput');
+  logoBtn.addEventListener('click', ()=> logoInput.click());
+  logoInput.addEventListener('change', ()=>{
+    const file = logoInput.files[0];
+    if(!file) return;
+    const warning = container.querySelector('#invLogoWarning');
+    warning.classList.add('hidden');
+    if(file.size > 2*1024*1024){
+      warning.textContent = 'That logo is over 2MB — pick a smaller image so it doesn\'t slow the invoice down.';
+      warning.classList.remove('hidden');
+      logoInput.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      logoDataUrl = e.target.result;
+      container.querySelector('#logoPreviewWrap').innerHTML = `<img src="${logoDataUrl}" class="w-full h-full object-contain">`;
+      const pvImg = container.querySelector('#pvLogoImg');
+      pvImg.src = logoDataUrl;
+      pvImg.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+  });
+  container.querySelector('#invAccentColor').addEventListener('input', (e)=>{
+    container.querySelector('#pvInvoiceLabel').style.color = e.target.value;
+  });
+
+  /* ---- currency helper: read the currently-selected currency code ---- */
+  function currentCurrency(){ return container.querySelector('#invCurrency').value; }
+
+  /* ---- default dates + invoice number ---- */
+  const today = new Date();
+  const due = new Date(today.getTime() + 14*86400000);
+  container.querySelector('#invIssueDate').value = today.toISOString().slice(0,10);
+  container.querySelector('#invDueDate').value = due.toISOString().slice(0,10);
+  let currentInvoiceNumber = nextInvoiceNumber();
+  // number is only "consumed" on save; if user leaves without saving we don't want gaps, but simplicity > perfect numbering
+  container.querySelector('#pvInvNumber').textContent = currentInvoiceNumber;
+
+  /* ---- line items rendering ---- */
+  function renderItems(){
+    const rows = container.querySelector('#invItemsRows');
+    rows.innerHTML = items.map((it,idx)=>`
+      <div class="grid grid-cols-12 gap-2 items-center py-2 border-b border-line dark:border-dark-line last:border-b-0">
+        <input data-idx="${idx}" data-field="desc" value="${esc(it.desc)}" placeholder="Item description" class="itemInput col-span-5 px-2 py-1.5 rounded border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-xs focus:outline-none focus:ring-1 focus:ring-brand/40">
+        <input data-idx="${idx}" data-field="qty" type="number" value="${it.qty}" min="0" step="1" class="itemInput col-span-2 px-2 py-1.5 rounded border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-xs font-mono text-right focus:outline-none focus:ring-1 focus:ring-brand/40">
+        <input data-idx="${idx}" data-field="rate" type="number" value="${it.rate}" min="0" step="0.01" class="itemInput col-span-2 px-2 py-1.5 rounded border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-xs font-mono text-right focus:outline-none focus:ring-1 focus:ring-brand/40">
+        <div class="col-span-2 text-right text-xs font-mono itemAmount">${fmt(it.qty*it.rate, currentCurrency())}</div>
+        <button data-idx="${idx}" class="itemRemoveBtn col-span-1 flex justify-end text-ink-soft dark:text-dark-soft hover:text-neg"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+      </div>
+    `).join('');
+    rows.querySelectorAll('.itemInput').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const idx = parseInt(inp.dataset.idx);
+        const field = inp.dataset.field;
+        items[idx][field] = field==='desc' ? inp.value : (parseFloat(inp.value)||0);
+        // update just this row's amount cell instead of re-rendering all rows —
+        // rebuilding the inputs on every keystroke was stealing focus, so users
+        // had to click again after every single character.
+        const rowEl = inp.closest('.grid');
+        const amountEl = rowEl && rowEl.querySelector('.itemAmount');
+        if(amountEl) amountEl.textContent = fmt(items[idx].qty*items[idx].rate, currentCurrency());
+        updateTotalsOnly();
+      });
+    });
+    rows.querySelectorAll('.itemRemoveBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(items.length<=1) return;
+        items.splice(parseInt(btn.dataset.idx),1);
+        renderItems(); updatePreview();
+      });
+    });
+    lucide.createIcons();
+  }
+
+  container.querySelector('#invAddItemBtn').addEventListener('click', ()=>{
+    items.push({ desc:'', qty:1, rate:0 });
+    renderItems(); updatePreview();
+  });
+
+  /* ---- live preview ---- */
+  function updatePreview(){
+    container.querySelector('#pvBizName').textContent = container.querySelector('#invBizName').value || 'Your Business';
+    container.querySelector('#pvBizEmail').textContent = container.querySelector('#invBizEmail').value;
+    container.querySelector('#pvClientName').textContent = container.querySelector('#invClientName').value || '—';
+    container.querySelector('#pvClientEmail').textContent = container.querySelector('#invClientEmail').value;
+    container.querySelector('#pvIssueDate').textContent = container.querySelector('#invIssueDate').value || '—';
+    container.querySelector('#pvDueDate').textContent = container.querySelector('#invDueDate').value || '—';
+
+    const bizTaxId = container.querySelector('#invBizTaxId').value.trim();
+    container.querySelector('#pvBizTaxIdWrap').classList.toggle('hidden', !bizTaxId);
+    container.querySelector('#pvBizTaxId').textContent = bizTaxId;
+    const clientTaxId = container.querySelector('#invClientTaxId').value.trim();
+    container.querySelector('#pvClientTaxIdWrap').classList.toggle('hidden', !clientTaxId);
+    container.querySelector('#pvClientTaxId').textContent = clientTaxId;
+
+    const currency = currentCurrency();
+    const subtotal = items.reduce((s,it)=>s+(it.qty*it.rate),0);
+    const discountPct = parseFloat(container.querySelector('#invDiscountPct').value)||0;
+    const taxPct = parseFloat(container.querySelector('#invTaxPct').value)||0;
+    const discountAmt = subtotal*(discountPct/100);
+    const taxAmt = (subtotal-discountAmt)*(taxPct/100);
+    const total = subtotal - discountAmt + taxAmt;
+
+    container.querySelector('#pvSubtotal').textContent = fmt(subtotal, currency);
+    container.querySelector('#pvDiscount').textContent = '−'+fmt(discountAmt, currency);
+    container.querySelector('#pvTax').textContent = '+'+fmt(taxAmt, currency);
+    container.querySelector('#pvTotal').textContent = fmt(total, currency);
+    renderItems();
+    return { subtotal, discountAmt, taxAmt, total, currency };
+  }
+
+  /* ---- lightweight totals refresh used while typing in a line item ----
+     (does NOT touch the item rows, so the field being typed in never loses focus) */
+  function updateTotalsOnly(){
+    const currency = currentCurrency();
+    const subtotal = items.reduce((s,it)=>s+(it.qty*it.rate),0);
+    const discountPct = parseFloat(container.querySelector('#invDiscountPct').value)||0;
+    const taxPct = parseFloat(container.querySelector('#invTaxPct').value)||0;
+    const discountAmt = subtotal*(discountPct/100);
+    const taxAmt = (subtotal-discountAmt)*(taxPct/100);
+    const total = subtotal - discountAmt + taxAmt;
+    container.querySelector('#pvSubtotal').textContent = fmt(subtotal, currency);
+    container.querySelector('#pvDiscount').textContent = '−'+fmt(discountAmt, currency);
+    container.querySelector('#pvTax').textContent = '+'+fmt(taxAmt, currency);
+    container.querySelector('#pvTotal').textContent = fmt(total, currency);
+    return { subtotal, discountAmt, taxAmt, total, currency };
+  }
+
+  ['invBizName','invBizEmail','invClientName','invClientEmail','invIssueDate','invDueDate','invTaxPct','invDiscountPct','invCurrency','invBizTaxId','invClientTaxId']
+    .forEach(id => container.querySelector('#'+id).addEventListener('input', updatePreview));
+
+  /* ---- save invoice + client ---- */
+  container.querySelector('#invSaveBtn').addEventListener('click', ()=>{
+    const name = container.querySelector('#invBizName').value.trim();
+    const email = container.querySelector('#invBizEmail').value.trim();
+    const address = container.querySelector('#invBizAddress').value.trim();
+    const bizTaxId = container.querySelector('#invBizTaxId').value.trim();
+    const accentColor = container.querySelector('#invAccentColor').value;
+    const currency = currentCurrency();
+    saveJSON(BIZ_KEY, { name, email, address, taxId: bizTaxId, logo: logoDataUrl, accentColor, currency });
+
+    const clientName = container.querySelector('#invClientName').value.trim();
+    const clientEmail = container.querySelector('#invClientEmail').value.trim();
+    const clientAddress = container.querySelector('#invClientAddress').value.trim();
+    let clients = loadJSON(CLIENTS_KEY, []);
+    let clientId = clientSelect.value;
+    if(!clientId && clientName){
+      clientId = 'c'+Date.now();
+      clients.push({ id:clientId, name:clientName, email:clientEmail, address:clientAddress, taxId: container.querySelector('#invClientTaxId').value.trim() });
+      saveJSON(CLIENTS_KEY, clients);
+      refreshClientOptions();
+      clientSelect.value = clientId;
+    }
+
+    const totals = updatePreview();
+    const invoices = loadJSON(INVOICES_KEY, []);
+    invoices.push({
+      id: 'i'+Date.now(),
+      number: currentInvoiceNumber,
+      clientName, clientEmail, clientAddress,
+      issueDate: container.querySelector('#invIssueDate').value,
+      dueDate: container.querySelector('#invDueDate').value,
+      items: JSON.parse(JSON.stringify(items)),
+      taxPct: parseFloat(container.querySelector('#invTaxPct').value)||0,
+      discountPct: parseFloat(container.querySelector('#invDiscountPct').value)||0,
+      notes: container.querySelector('#invNotes').value.trim(),
+      total: totals.total,
+      currency,
+      status: 'unpaid'
+    });
+    saveJSON(INVOICES_KEY, invoices);
+
+    // start a fresh invoice
+    currentInvoiceNumber = nextInvoiceNumber();
+    container.querySelector('#pvInvNumber').textContent = currentInvoiceNumber;
+    items = [{ desc:'', qty:1, rate:0 }];
+    container.querySelector('#invNotes').value = '';
+    renderItems(); updatePreview();
+
+    const btn = container.querySelector('#invSaveBtn');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<span class="text-pos text-sm font-semibold">✓ Saved</span>';
+    setTimeout(()=>{ btn.innerHTML = original; lucide.createIcons(); }, 1500);
+  });
+
+  /* ---- PDF export ---- */
+  container.querySelector('#invPdfBtn').addEventListener('click', ()=>{
+    const totals = updatePreview();
+    const currency = totals.currency;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const bizName = container.querySelector('#invBizName').value || 'Your Business';
+    const bizEmail = container.querySelector('#invBizEmail').value;
+    const clientName = container.querySelector('#invClientName').value || '—';
+    const clientEmail = container.querySelector('#invClientEmail').value;
+    const issueDate = container.querySelector('#invIssueDate').value;
+    const dueDate = container.querySelector('#invDueDate').value;
+    const notes = container.querySelector('#invNotes').value;
+    const accentHex = container.querySelector('#invAccentColor').value;
+    const accentRgb = hexToRgb(accentHex);
+
+    let y = 50;
+    let textStartX = 40;
+    if(logoDataUrl){
+      try{
+        const fmtMatch = logoDataUrl.match(/^data:image\/(png|jpeg|jpg)/i);
+        const imgFormat = fmtMatch ? fmtMatch[1].toUpperCase().replace('JPG','JPEG') : 'PNG';
+        doc.addImage(logoDataUrl, imgFormat, 40, y-24, 32, 32);
+        textStartX = 82;
+      }catch(e){ /* unsupported image format for jsPDF (e.g. SVG) — skip embedding, keep text-only header */ }
+    }
+    doc.setFont('helvetica','bold'); doc.setFontSize(18);
+    doc.text(bizName, textStartX, y);
+    doc.setFontSize(20); doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    doc.text('INVOICE', 555, y, { align:'right' });
+    doc.setTextColor(0,0,0);
+    y += 18;
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(bizEmail, textStartX, y);
+    doc.text(currentInvoiceNumber, 555, y, { align:'right' });
+
+    y += 40;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('BILL TO', 40, y);
+    doc.text('ISSUED: '+issueDate, 555, y, { align:'right' });
+    y += 14;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text(clientName, 40, y);
+    doc.setFontSize(9);
+    doc.text('DUE: '+dueDate, 555, y, { align:'right' });
+    y += 14;
+    doc.text(clientEmail, 40, y);
+    const bizTaxId = container.querySelector('#invBizTaxId').value.trim();
+    const clientTaxId = container.querySelector('#invClientTaxId').value.trim();
+    if(bizTaxId){ doc.text('TAX ID: '+bizTaxId, 555, y, { align:'right' }); }
+    if(clientTaxId){ y += 14; doc.text('TAX ID: '+clientTaxId, 40, y); }
+
+    y += 35;
+    doc.setDrawColor(220,220,220); doc.line(40,y,555,y);
+    y += 18;
+    doc.setFont('helvetica','bold'); doc.setFontSize(9);
+    doc.text('DESCRIPTION', 40, y);
+    doc.text('QTY', 380, y, { align:'right' });
+    doc.text('RATE', 460, y, { align:'right' });
+    doc.text('AMOUNT', 555, y, { align:'right' });
+    y += 10;
+    doc.line(40,y,555,y);
+    y += 18;
+
+    doc.setFont('helvetica','normal');
+    items.forEach(it=>{
+      doc.text(it.desc || '(no description)', 40, y, { maxWidth: 300 });
+      doc.text(String(it.qty), 380, y, { align:'right' });
+      doc.text(fmtPdf(it.rate, currency), 460, y, { align:'right' });
+      doc.text(fmtPdf(it.qty*it.rate, currency), 555, y, { align:'right' });
+      y += 20;
+    });
+
+    y += 10;
+    doc.line(320,y,555,y);
+    y += 18;
+    doc.text('Subtotal', 460, y, { align:'right' }); doc.text(fmtPdf(totals.subtotal, currency), 555, y, { align:'right' }); y+=16;
+    doc.text('Discount', 460, y, { align:'right' }); doc.text('-'+fmtPdf(totals.discountAmt, currency), 555, y, { align:'right' }); y+=16;
+    doc.text('Tax', 460, y, { align:'right' }); doc.text('+'+fmtPdf(totals.taxAmt, currency), 555, y, { align:'right' }); y+=16;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text('Total', 460, y, { align:'right' }); doc.text(fmtPdf(totals.total, currency), 555, y, { align:'right' });
+
+    if(notes){
+      y += 45;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,100,100);
+      doc.text('NOTES', 40, y); y += 14;
+      doc.text(notes, 40, y, { maxWidth: 515 });
+    }
+
+    doc.save(currentInvoiceNumber+'.pdf');
+  });
+
+  /* ---- invoice list view ---- */
+  function renderInvoiceList(){
+    const invoices = loadJSON(INVOICES_KEY, []);
+    const list = container.querySelector('#invListRows');
+    if(invoices.length===0){
+      list.innerHTML = `<div class="px-6 py-10 text-center text-sm text-ink-soft dark:text-dark-soft">No saved invoices yet.</div>`;
+    } else {
+      list.innerHTML = invoices.slice().reverse().map(inv=>`
+        <div class="px-6 py-3.5 flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-medium truncate">${esc(inv.clientName || 'Untitled client')} <span class="text-ink-soft dark:text-dark-soft font-mono text-xs">${esc(inv.number)}</span></p>
+            <p class="text-xs text-ink-soft dark:text-dark-soft">Due ${esc(inv.dueDate)}</p>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <span class="font-mono text-sm">${fmt(inv.total, inv.currency || 'USD')}</span>
+            <button data-id="${inv.id}" class="statusBtn text-[11px] font-semibold px-2.5 py-1 rounded-full ${inv.status==='paid' ? 'bg-pos/10 text-pos' : 'bg-brand-soft dark:bg-brand/10 text-brand'}">${inv.status==='paid' ? 'Paid' : 'Mark paid'}</button>
+            <button data-id="${inv.id}" class="deleteInvBtn text-ink-soft dark:text-dark-soft hover:text-neg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+    const outstandingInvs = invoices.filter(i=>i.status!=='paid');
+    const currencies = new Set(outstandingInvs.map(i=>i.currency || 'USD'));
+    if(currencies.size<=1){
+      const outstanding = outstandingInvs.reduce((s,i)=>s+i.total,0);
+      const code = currencies.size===1 ? [...currencies][0] : 'USD';
+      container.querySelector('#invListTotal').textContent = fmt(outstanding, code)+' outstanding';
+    } else {
+      container.querySelector('#invListTotal').textContent = outstandingInvs.length+' invoices outstanding (mixed currencies)';
+    }
+    lucide.createIcons();
+
+    list.querySelectorAll('.statusBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const invs = loadJSON(INVOICES_KEY, []);
+        const inv = invs.find(i=>i.id===btn.dataset.id);
+        if(inv) inv.status = inv.status==='paid' ? 'unpaid' : 'paid';
+        saveJSON(INVOICES_KEY, invs);
+        renderInvoiceList();
+      });
+    });
+    list.querySelectorAll('.deleteInvBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const remaining = loadJSON(INVOICES_KEY, []).filter(i=>i.id!==btn.dataset.id);
+        saveJSON(INVOICES_KEY, remaining);
+        renderInvoiceList();
+      });
+    });
+  }
+
+  renderItems();
+  updatePreview();
+  lucide.createIcons();
+};
+
+MODULES.timer = function(container){
+  const STORAGE_KEY = 'solokit_time_entries';
+  const RUNNING_KEY = 'solokit_timer_running';
+
+  function loadEntries(){ return loadJSON(STORAGE_KEY, []); }
+  function saveEntries(entries){ saveJSON(STORAGE_KEY, entries); }
+  function loadRunning(){ try{ return JSON.parse(localStorage.getItem(RUNNING_KEY)); } catch{ return null; } }
+  function saveRunning(state){ state ? localStorage.setItem(RUNNING_KEY, JSON.stringify(state)) : localStorage.removeItem(RUNNING_KEY); }
+
+  function fmtDuration(ms){
+    const totalSec = Math.floor(ms/1000);
+    const h = Math.floor(totalSec/3600), m = Math.floor((totalSec%3600)/60), s = totalSec%60;
+    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
+  function fmtHoursDecimal(ms){ return (ms/3600000).toFixed(2); }
+
+  container.innerHTML = `
+    <div class="mb-8">
+      <h1 class="font-display font-700 text-2xl mb-1.5">Time Tracker</h1>
+      <p class="text-sm text-ink-soft dark:text-dark-soft">Track hours per project. Saved locally in this browser.</p>
+    </div>
+
+    <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl p-6 mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-end gap-4">
+        <div class="flex-1">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Project / task name</label>
+          <input type="text" id="timerProject" placeholder="e.g. Client website redesign" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm focus:outline-none focus:ring-2 focus:ring-brand/40">
+        </div>
+        <div class="w-32">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft mb-1.5">Rate ($/hr)</label>
+          <input type="number" id="timerRate" value="0" min="0" step="1" class="w-full px-3.5 py-2.5 rounded-lg border border-line dark:border-dark-line bg-paper dark:bg-dark-bg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/40">
+        </div>
+        <div class="font-mono text-3xl tabular font-bold w-40 text-center" id="timerDisplay">00:00:00</div>
+        <button id="timerToggleBtn" class="px-6 py-2.5 rounded-lg bg-pos text-white text-sm font-semibold hover:opacity-90 transition flex items-center gap-2 justify-center">
+          <i data-lucide="play" class="w-4 h-4"></i> <span id="timerToggleLabel">Start</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-dark-surface border border-line dark:border-dark-line rounded-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-line dark:border-dark-line flex items-center justify-between">
+        <p class="text-xs font-semibold uppercase tracking-wide text-ink-soft dark:text-dark-soft">Logged entries</p>
+        <p class="text-sm font-mono tabular" id="timerTotalHours">0.00 hrs total</p>
+      </div>
+      <div id="timerEntriesList" class="divide-y divide-line dark:divide-dark-line"></div>
+    </div>
+  `;
+
+  const display = container.querySelector('#timerDisplay');
+  const toggleBtn = container.querySelector('#timerToggleBtn');
+  const toggleLabel = container.querySelector('#timerToggleLabel');
+  const projectInput = container.querySelector('#timerProject');
+  const rateInput = container.querySelector('#timerRate');
+  let tickInterval = null;
+  const fmtMoney = n => '$'+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  function renderEntries(){
+    const entries = loadEntries();
+    const list = container.querySelector('#timerEntriesList');
+    if(entries.length===0){
+      list.innerHTML = `<div class="px-6 py-10 text-center text-sm text-ink-soft dark:text-dark-soft">No entries yet — start the timer above to log your first session.</div>`;
+    } else {
+      list.innerHTML = entries.slice().reverse().map((e)=>`
+        <div class="px-6 py-3.5 flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium">${escapeHtml(e.project || 'Untitled')}</p>
+            <p class="text-xs text-ink-soft dark:text-dark-soft">${new Date(e.startedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}${e.rate ? ' · '+fmtMoney(e.rate)+'/hr' : ''}</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="font-mono tabular text-sm">${fmtHoursDecimal(e.durationMs)} hrs</span>
+            ${e.rate ? `<span class="font-mono tabular text-sm text-pos">${fmtMoney((e.durationMs/3600000)*e.rate)}</span>` : ''}
+            ${e.rate ? `<button data-id="${e.id}" class="timerInvoiceBtn text-ink-soft dark:text-dark-soft hover:text-brand transition" title="Send to invoice"><i data-lucide="file-plus" class="w-4 h-4"></i></button>` : ''}
+            <button data-id="${e.id}" class="timerDeleteBtn text-ink-soft dark:text-dark-soft hover:text-neg transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+    const totalMs = entries.reduce((sum,e)=>sum+e.durationMs,0);
+    container.querySelector('#timerTotalHours').textContent = fmtHoursDecimal(totalMs)+' hrs total';
+    lucide.createIcons();
+    list.querySelectorAll('.timerDeleteBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const remaining = loadEntries().filter(e=>e.id!==btn.dataset.id);
+        saveEntries(remaining);
+        renderEntries();
+      });
+    });
+    list.querySelectorAll('.timerInvoiceBtn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const entry = loadEntries().find(e=>e.id===btn.dataset.id);
+        if(!entry) return;
+        const hours = Math.round((entry.durationMs/3600000)*100)/100;
+        localStorage.setItem('solokit_pending_invoice_item', JSON.stringify({
+          desc: entry.project || 'Time tracked', qty: hours, rate: entry.rate || 0
+        }));
+        document.querySelector('.nav-btn[data-module="invoice"]').click();
+      });
+    });
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+  }
+
+  function setRunningUI(running){
+    toggleBtn.classList.toggle('bg-pos', !running);
+    toggleBtn.classList.toggle('bg-neg', running);
+    toggleLabel.textContent = running ? 'Stop' : 'Start';
+    toggleBtn.querySelector('i').setAttribute('data-lucide', running ? 'square' : 'play');
+    lucide.createIcons();
+    projectInput.disabled = running;
+    rateInput.disabled = running;
+  }
+
+  function tick(){
+    const running = loadRunning();
+    if(!running) return;
+    display.textContent = fmtDuration(Date.now() - running.startedAt);
+  }
+
+  function startTimer(){
+    const state = { startedAt: Date.now(), project: projectInput.value.trim(), rate: parseFloat(rateInput.value)||0 };
+    saveRunning(state);
+    setRunningUI(true);
+    if(tickInterval) clearInterval(tickInterval);
+    tickInterval = setInterval(tick, 1000);
+    tick();
+  }
+
+  function stopTimer(){
+    const running = loadRunning();
+    if(!running) return;
+    const durationMs = Date.now() - running.startedAt;
+    const entries = loadEntries();
+    entries.push({ id: 't'+Date.now(), project: running.project, startedAt: running.startedAt, durationMs, rate: running.rate||0 });
+    saveEntries(entries);
+    saveRunning(null);
+    setRunningUI(false);
+    display.textContent = '00:00:00';
+    if(tickInterval) clearInterval(tickInterval);
+    renderEntries();
+  }
+
+  toggleBtn.addEventListener('click', ()=>{
+    loadRunning() ? stopTimer() : startTimer();
+  });
+
+  // Restore in-progress timer if the user navigated away and came back
+  const running = loadRunning();
+  if(running){
+    projectInput.value = running.project || '';
+    rateInput.value = running.rate || 0;
+    setRunningUI(true);
+    tickInterval = setInterval(tick, 1000);
+    tick();
+  } else {
+    setRunningUI(false);
+  }
+
+  renderEntries();
+};
+
+
+/* ===================== BOOT ===================== */
+lucide.createIcons();
+if(!SUPABASE_CONFIGURED){
+  showScreen('setup');
+} else {
+  sb.auth.onAuthStateChange((event)=>{
+    if(event==='SIGNED_OUT'){ showScreen('auth'); }
+  });
+  initSession();
+}
+</script>
+
+</body>
+</html>
